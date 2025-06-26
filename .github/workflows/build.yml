@@ -17,8 +17,9 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Build Project
+    - name: Build with ESP-IDF
+      shell: bash
       run: |
+        export IDF_PYTHON_ENV_PATH=/root/.espressif/python_env/idf5.4_py3.11_env
         source /opt/esp-idf/export.sh
-        idf.py set-target esp32
         idf.py build
