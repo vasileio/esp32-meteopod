@@ -1,0 +1,11 @@
+menu "Wi-Fi Configuration"
+
+config WIFI_SSID
+    string "Wi-Fi SSID"
+    default "myssid"
+
+config WIFI_PASS
+    string "Wi-Fi Password"
+    default "mypassword"
+
+endmenu
