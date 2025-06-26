@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, esp32]
+    runs-on: [self-hosted, Linux, X64]
 
     env:
       IDF_VERSION: v5.4.1
