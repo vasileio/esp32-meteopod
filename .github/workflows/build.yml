@@ -26,6 +26,7 @@ jobs:
     - name: Check serial device access
       run: |
         ls -l /dev/ttyUSB*
+        whoami
         groups
         
     - name: Flash with ESP-IDF
