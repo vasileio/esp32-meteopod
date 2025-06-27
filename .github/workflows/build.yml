@@ -53,7 +53,7 @@ jobs:
         echo "Starting serial monitor..."
 
         # Run miniterm for 30 seconds, capturing all serial output
-        timeout 30 ~/.local/bin/miniterm.py /dev/ttyUSB1 115200 \
+        timeout 30 python3 -m serial.tools.miniterm /dev/ttyUSB1 115200 \
           --quiet --raw > monitor.log
 
         echo "Monitoring complete. Checking for expected output..."
