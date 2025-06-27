@@ -22,3 +22,9 @@ jobs:
       run: |
         source /opt/esp-idf/export.sh
         idf.py build
+
+    - name: Flash with ESP-IDF
+      shell: bash
+      run: |
+        source /opt/esp-idf/export.sh
+        idf.py -p /dev/ttyUSB1 flash
