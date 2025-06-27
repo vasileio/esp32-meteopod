@@ -172,11 +172,9 @@ void blink_task(void *pvParameters)
 
     while (1) {
         gpio_set_level(BLINK_GPIO, 1);
-        ESP_LOGI(TAG, "LED ON");
         vTaskDelay(pdMS_TO_TICKS(500));
 
         gpio_set_level(BLINK_GPIO, 0);
-        ESP_LOGI(TAG, "LED OFF");
         vTaskDelay(pdMS_TO_TICKS(500));
     }
 }
