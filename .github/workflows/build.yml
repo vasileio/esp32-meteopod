@@ -50,13 +50,10 @@ jobs:
       run: |
         source /opt/esp-idf/export.sh
 
-        echo "Starting serial monitor..."
+        echo "Starting monitor using 'script' to simulate TTY..."
 
-        # Run miniterm for 30 seconds, capturing all serial output
-        timeout 30 python3 -m serial.tools.miniterm /dev/ttyUSB1 115200 \
-          --quiet --raw > monitor.log
-
-        echo "Monitoring complete. Checking for expected output..."
+        timeout 30 script -q -c "idf.py -p /dev/ttyUSB1 monitor" monitor.log
+            echo "Monitoring complete. Checking for expected output..."
 
         # Look for required strings using extended regex
         if grep -Eq 'MAIN: Accel: \(0, 0, 0\)|SYSTEM_MONITOR: Uptime|Free Heap' monitor.log; then
