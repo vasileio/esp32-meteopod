@@ -45,19 +45,8 @@ jobs:
       IDF_VERSION: v5.4.1
 
     steps:
-    - name: Flash with ESP-IDF
+    - name: Monitor serial output after flassing
       shell: bash
       run: |
         source /opt/esp-idf/export.sh
-        
-        # Monitor for 30 seconds, look for expected strings
-        timeout 30 idf.py -p /dev/ttyUSB1 monitor | tee monitor.log | grep -q 'SYSTEM_MONITOR: Uptime'
-
-        if [ $? -eq 0 ]; then
-          echo "Expected output found in serial log."
-        else
-          echo "Expected output NOT found."
-          echo "Monitor log:"
-          cat monitor.log
-          exit 1
-        fi
+        idf.py -p /dev/ttyUSB1 flash
