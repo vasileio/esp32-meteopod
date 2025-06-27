@@ -12,6 +12,7 @@
 #include "esp_task_wdt.h"
 
 #include "wifi.h"
+#include "system_monitor.h"
 
 #define TAG "MAIN"
 
@@ -209,4 +210,5 @@ void app_main(void)
     xTaskCreate(command_task, "CommandTask", 4096, NULL, 3, &commandTaskHandle);
     xTaskCreate(watchdog_task, "WatchdogTask", 2048, NULL, 6, &watchdogTaskHandle);
     xTaskCreate(blink_task, "blink_task", 3072, NULL, 1, NULL);
+    xTaskCreate(system_monitor_task, "SystemMonitorTask", 4096, NULL, 1, NULL);
 }
