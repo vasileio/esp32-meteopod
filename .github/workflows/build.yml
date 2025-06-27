@@ -24,6 +24,7 @@ jobs:
         idf.py build
 
   flash:
+    needs: build
     runs-on: [self-hosted, Linux, X64]
 
     env:
