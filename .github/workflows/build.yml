@@ -49,4 +49,4 @@ jobs:
       shell: bash
       run: |
         source /opt/esp-idf/export.sh
-        idf.py -p /dev/ttyUSB1 flash
+        idf.py -p /dev/ttyUSB1 monitor
