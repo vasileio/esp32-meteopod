@@ -15,6 +15,8 @@
 
 #define TAG "MAIN"
 
+#define BLINK_GPIO 2
+
 TaskHandle_t sensorTaskHandle = NULL;
 TaskHandle_t loggingTaskHandle = NULL;
 TaskHandle_t commandTaskHandle = NULL;
@@ -31,12 +33,39 @@ typedef struct {
     int pm10;
 } sensor_data_t;
 
+sensor_data_t shared_sensor_data;
+SemaphoreHandle_t sensorDataMutex;
+
 #define UART_PORT UART_NUM_1
 #define BUF_SIZE 1024
 #define UART_RX_PIN 16
 #define UART_TX_PIN 17
 
 #define WATCHDOG_TIMEOUT_SEC 5
+
+#define IMU_UART_NUM      UART_NUM_2
+#define IMU_UART_TXD      GPIO_NUM_25
+#define IMU_UART_RXD      GPIO_NUM_26
+#define IMU_UART_BAUDRATE 115200
+#define IMU_UART_BUF_SIZE 512
+
+void imu_uart_init(void)
+{
+    const uart_config_t uart_config = {
+        .baud_rate = IMU_UART_BAUDRATE,
+        .data_bits = UART_DATA_8_BITS,
+        .parity    = UART_PARITY_DISABLE,
+        .stop_bits = UART_STOP_BITS_1,
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+        .source_clk = UART_SCLK_APB,
+    };
+
+    ESP_ERROR_CHECK(uart_driver_install(IMU_UART_NUM, IMU_UART_BUF_SIZE * 2, 0, 0, NULL, 0));
+    ESP_ERROR_CHECK(uart_param_config(IMU_UART_NUM, &uart_config));
+    ESP_ERROR_CHECK(uart_set_pin(IMU_UART_NUM, IMU_UART_TXD, IMU_UART_RXD, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+
+    ESP_LOGI(TAG, "UART2 initialized for IMU");
+}
 
 void init_uart()
 {
@@ -59,34 +88,55 @@ void periodic_sensor_cb(void* arg)
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
-void sensor_task(void *pvParameters)
+void sensor_accel_task(void *pvParameters)
 {
-    sensor_data_t data;
+    imu_uart_init();
+
+    uint8_t data[IMU_UART_BUF_SIZE];
+    while (1) {
+        int len = uart_read_bytes(IMU_UART_NUM, data, sizeof(data), pdMS_TO_TICKS(100));
+        if (len > 0) {
+            // This is a stub — real parsing should use preamble + checksum
+            ESP_LOGI("IMU", "Received %d bytes from IMU", len);
+            ESP_LOG_BUFFER_HEXDUMP("IMU", data, len, ESP_LOG_INFO);
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(200)); // ~5Hz polling
+    }
+}
+
+
+void sensor_pm_task(void *pvParameters)
+{
     while (1) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        data.accel_x = rand() % 100;
-        data.accel_y = rand() % 100;
-        data.accel_z = rand() % 100;
-        data.pm25 = rand() % 50;
-        data.pm10 = rand() % 100;
-        if (xQueueSend(sensorDataQueue, &data, pdMS_TO_TICKS(50)) != pdPASS) {
-            ESP_LOGW(TAG, "Sensor queue full");
+
+        if (xSemaphoreTake(sensorDataMutex, portMAX_DELAY)) {
+            shared_sensor_data.pm25 = rand() % 50;
+            shared_sensor_data.pm10 = rand() % 100;
+            xSemaphoreGive(sensorDataMutex);
+        } else {
+            ESP_LOGW("PM", "Mutex unavailable");
         }
     }
 }
 
 void logging_task(void *pvParameters)
 {
-    sensor_data_t received_data;
     while (1) {
-        if (xQueueReceive(sensorDataQueue, &received_data, portMAX_DELAY)) {
+        if (xSemaphoreTake(sensorDataMutex, pdMS_TO_TICKS(50))) {
             ESP_LOGI(TAG, "Accel: (%d, %d, %d), PM2.5: %d, PM10: %d",
-                     received_data.accel_x,
-                     received_data.accel_y,
-                     received_data.accel_z,
-                     received_data.pm25,
-                     received_data.pm10);
+                     shared_sensor_data.accel_x,
+                     shared_sensor_data.accel_y,
+                     shared_sensor_data.accel_z,
+                     shared_sensor_data.pm25,
+                     shared_sensor_data.pm10);
+            xSemaphoreGive(sensorDataMutex);
+        } else {
+            ESP_LOGW(TAG, "Failed to take data mutex");
         }
+
+        vTaskDelay(pdMS_TO_TICKS(1000));  // Log every 1s, adjust as needed
     }
 }
 
@@ -114,6 +164,22 @@ void watchdog_task(void *pvParameters)
     }
 }
 
+void blink_task(void *pvParameters)
+{
+    esp_rom_gpio_pad_select_gpio(BLINK_GPIO);
+    gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
+
+    while (1) {
+        gpio_set_level(BLINK_GPIO, 1);
+        ESP_LOGI(TAG, "LED ON");
+        vTaskDelay(pdMS_TO_TICKS(500));
+
+        gpio_set_level(BLINK_GPIO, 0);
+        ESP_LOGI(TAG, "LED OFF");
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+}
+
 void app_main(void)
 {
     ESP_LOGI(TAG, "System booting...");
@@ -132,8 +198,15 @@ void app_main(void)
     esp_timer_create(&timer_args, &periodic_timer);
     esp_timer_start_periodic(periodic_timer, 1000000); // 1s
 
-    xTaskCreate(sensor_task, "SensorTask", 4096, NULL, 5, &sensorTaskHandle);
+    sensorDataMutex = xSemaphoreCreateMutex();
+    if (sensorDataMutex == NULL) {
+        ESP_LOGE("MAIN", "Failed to create mutex");
+    }
+
+    xTaskCreate(sensor_accel_task, "sensor_accel_task", 4096, NULL, 5, &sensorTaskHandle);
+    xTaskCreate(sensor_pm_task, "sensor_pm_task", 4096, NULL, 5, &sensorTaskHandle);
     xTaskCreate(logging_task, "LoggingTask", 4096, NULL, 4, &loggingTaskHandle);
     xTaskCreate(command_task, "CommandTask", 4096, NULL, 3, &commandTaskHandle);
-    xTaskCreate(watchdog_task, "WatchdogTask", 2048, NULL, 2, &watchdogTaskHandle);
+    xTaskCreate(watchdog_task, "WatchdogTask", 2048, NULL, 6, &watchdogTaskHandle);
+    xTaskCreate(blink_task, "blink_task", 3072, NULL, 1, NULL);
 }
