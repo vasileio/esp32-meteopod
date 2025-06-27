@@ -23,12 +23,13 @@ jobs:
         source /opt/esp-idf/export.sh
         idf.py build
 
-    - name: Check serial device access
-      run: |
-        ls -l /dev/ttyUSB*
-        whoami
-        groups
-        
+  flash:
+    runs-on: [self-hosted, Linux, X64]
+
+    env:
+      IDF_VERSION: v5.4.1
+
+    steps:
     - name: Flash with ESP-IDF
       shell: bash
       run: |

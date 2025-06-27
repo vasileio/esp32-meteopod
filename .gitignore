@@ -2,5 +2,5 @@
 /.vscode
 
 .clangd
-sdkconfig
+# sdkconfig
 sdkconfig.old
