@@ -49,4 +49,37 @@ jobs:
       shell: bash
       run: |
         source /opt/esp-idf/export.sh
-        idf.py -p /dev/ttyUSB1 monitor
+
+        echo "Starting serial monitor..."
+
+        # Run miniterm for 30 seconds, capturing all serial output
+        timeout 30 ~/.local/bin/miniterm.py /dev/ttyUSB1 115200 \
+          --quiet --raw > monitor.log
+
+        echo "Monitoring complete. Checking for expected output..."
+
+        # Look for required strings using extended regex
+        if grep -Eq 'MAIN: Accel: \(0, 0, 0\)|SYSTEM_MONITOR: Uptime|Free Heap' monitor.log; then
+          echo "Expected log entries found"
+        else
+          echo "Expected output NOT found"
+          cat monitor.log
+          exit 1
+        fi
+
+        echo "Checking for crash patterns..."
+
+        # Look for crash/fatal error signatures
+        if grep -Eq 'Guru Meditation Error|panic|abort|stack smashing|WDT|Backtrace' monitor.log; then
+          echo "Crash pattern detected in monitor output!"
+          cat monitor.log
+          exit 1
+        fi
+
+        echo "No crash patterns detected. Serial output looks good."
+
+    - name: Upload monitor log
+      uses: actions/upload-artifact@v4
+      with:
+        name: serial-log
+        path: monitor.log
