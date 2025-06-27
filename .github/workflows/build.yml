@@ -52,8 +52,9 @@ jobs:
 
         echo "Starting monitor using 'script' to simulate TTY..."
 
-        timeout 30 script -q -c "idf.py -p /dev/ttyUSB1 monitor" monitor.log
-            echo "Monitoring complete. Checking for expected output..."
+        timeout --preserve-status 30 script -q -c "idf.py -p /dev/ttyUSB1 monitor" monitor.log || [[ $? -eq 124 ]]
+        
+        echo "Monitoring complete. Checking for expected output..."
 
         # Look for required strings using extended regex
         if grep -Eq 'MAIN: Accel: \(0, 0, 0\)|SYSTEM_MONITOR: Uptime|Free Heap' monitor.log; then
