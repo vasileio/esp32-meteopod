@@ -45,7 +45,7 @@ jobs:
       IDF_VERSION: v5.4.1
 
     steps:
-    - name: Monitor serial output after flassing
+    - name: Monitor serial output after flashing
       shell: bash
       run: |
         source /opt/esp-idf/export.sh
@@ -81,3 +81,17 @@ jobs:
       with:
         name: serial-log
         path: monitor.log
+
+  artifact_upload:
+    needs: monitor_output
+    runs-on: [self-hosted, Linux, X64]
+
+    steps:
+    - name: Upload firmware artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: esp32-firmware-${{ github.run_id }}-${{ github.run_attempt }}
+        path: |
+          build/esp32_rtos_envnode.bin
+          build/esp32_rtos_envnode.elf
+          build/esp32_rtos_envnode.map
