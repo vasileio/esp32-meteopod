@@ -61,7 +61,7 @@ void logging_task(void *pvParameters)
 {
     while (1) {
         if (xSemaphoreTake(sensorDataMutex, pdMS_TO_TICKS(50))) {
-            ESP_LOGI(TAG, "Temp: %d C, Rel. Humidity: %d\%, PM2.5: %d, PM10: %d",
+            ESP_LOGI(TAG, "Temp: %d C, Rel. Humidity: %d, PM2.5: %d, PM10: %d",
                      shared_sensor_data.temp_C,
                      shared_sensor_data.rel_hum,
                      shared_sensor_data.pm25,

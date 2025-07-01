@@ -6,12 +6,6 @@
 #include "esp_log.h"
 #include "sensors.h"
 
-#define IMU_UART_NUM      UART_NUM_2
-#define IMU_UART_TXD      GPIO_NUM_25
-#define IMU_UART_RXD      GPIO_NUM_26
-#define IMU_UART_BAUDRATE 115200
-#define IMU_UART_BUF_SIZE 512
-
 extern SemaphoreHandle_t sensorDataMutex;
 extern sensor_data_t shared_sensor_data;
 
