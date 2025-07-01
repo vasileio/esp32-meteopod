@@ -92,6 +92,6 @@ jobs:
       with:
         name: esp32-firmware-${{ github.run_id }}-${{ github.run_attempt }}
         path: |
-          build/esp32_rtos_envnode.bin
-          build/esp32_rtos_envnode.elf
-          build/esp32_rtos_envnode.map
+          build/esp32_meteopod.bin
+          build/esp32_meteopod.elf
+          build/esp32_meteopod.map
