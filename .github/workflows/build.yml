@@ -1,4 +1,4 @@
-name: Build ESP32 Firmware
+name: Build, flash and test meteopod firmware
 
 on:
   push:
@@ -14,12 +14,16 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Build with ESP-IDF
+    - name: Clean and set up environment
       shell: bash
       run: |
         source /opt/esp-idf/export.sh
         idf.py fullclean
         cp /opt/sdkconfig.defaults .
+
+    - name: Build with ESP-IDF
+      shell: bash
+      run: |
         idf.py build
 
   flash:
