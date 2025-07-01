@@ -86,10 +86,14 @@ jobs:
     runs-on: [self-hosted, Linux, X64]
 
     steps:
+    - name: Set timestamp
+      id: timestamp
+      run: echo "ts=$(date +'%Y%m%d-%H%M%S')" >> "$GITHUB_OUTPUT"
+    
     - name: Upload firmware artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: esp32-firmware-${{ github.run_id }}-${{ github.run_attempt }}
+        name: esp32-meteopod-firmware-${{ github.ref_name }}-${{ steps.timestamp.outputs.ts }}
         path: |
           build/esp32_meteopod.bin
           build/esp32_meteopod.elf
