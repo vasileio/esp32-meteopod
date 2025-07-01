@@ -60,7 +60,7 @@ jobs:
         echo "Monitoring complete. Checking for expected output..."
 
         # Look for required strings using extended regex
-        if grep -Eq 'MAIN: Accel: \(0, 0, 0\)|SYSTEM_MONITOR: Uptime|Free Heap' monitor.log; then
+        if grep -Eq 'MAIN: Temp: |SYSTEM_MONITOR: Uptime|Free Heap' monitor.log; then
           echo "Expected log entries found"
         else
           echo "Expected output NOT found"

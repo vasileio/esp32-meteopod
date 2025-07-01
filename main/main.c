@@ -61,10 +61,9 @@ void logging_task(void *pvParameters)
 {
     while (1) {
         if (xSemaphoreTake(sensorDataMutex, pdMS_TO_TICKS(50))) {
-            ESP_LOGI(TAG, "Accel: (%d, %d, %d), PM2.5: %d, PM10: %d",
-                     shared_sensor_data.accel_x,
-                     shared_sensor_data.accel_y,
-                     shared_sensor_data.accel_z,
+            ESP_LOGI(TAG, "Temp: %d C, Rel. Humidity: %d\%, PM2.5: %d, PM10: %d",
+                     shared_sensor_data.temp_C,
+                     shared_sensor_data.rel_hum,
                      shared_sensor_data.pm25,
                      shared_sensor_data.pm10);
             xSemaphoreGive(sensorDataMutex);
@@ -137,7 +136,7 @@ void app_main(void)
         ESP_LOGE("MAIN", "Failed to create mutex");
     }
 
-    xTaskCreate(sensor_accel_task, "sensor_accel_task", 4096, NULL, 5, &sensorTaskHandle);
+    xTaskCreate(sensor_temp_hum_task, "sensor_temp_hum_task", 4096, NULL, 5, &sensorTaskHandle);
     xTaskCreate(sensor_pm_task, "sensor_pm_task", 4096, NULL, 5, &sensorTaskHandle);
     xTaskCreate(logging_task, "LoggingTask", 4096, NULL, 4, &loggingTaskHandle);
     xTaskCreate(command_task, "CommandTask", 4096, NULL, 3, &commandTaskHandle);
