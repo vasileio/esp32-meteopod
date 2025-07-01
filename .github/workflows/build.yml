@@ -1,0 +1,100 @@
+name: Build ESP32 Firmware
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: [self-hosted, Linux, X64]
+
+    env:
+      IDF_VERSION: v5.4.1
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Build with ESP-IDF
+      shell: bash
+      run: |
+        source /opt/esp-idf/export.sh
+        idf.py fullclean
+        cp /opt/sdkconfig.defaults .
+        idf.py build
+
+  flash:
+    needs: build
+    runs-on: [self-hosted, Linux, X64]
+
+    env:
+      IDF_VERSION: v5.4.1
+
+    steps:
+    - name: Flash with ESP-IDF
+      shell: bash
+      run: |
+        source /opt/esp-idf/export.sh
+        /usr/local/bin/manage_usb_power cycle ttyUSB1
+        idf.py -p /dev/ttyUSB1 flash
+
+  monitor_output:
+    needs: flash
+    runs-on: [self-hosted, Linux, X64]
+
+    env:
+      IDF_VERSION: v5.4.1
+
+    steps:
+    - name: Monitor serial output after flashing
+      shell: bash
+      run: |
+        source /opt/esp-idf/export.sh
+
+        echo "Starting monitor using 'script' to simulate TTY..."
+
+        timeout --preserve-status 30 script -q -c "idf.py -p /dev/ttyUSB1 monitor" monitor.log || [[ $? -eq 124 ]]
+        
+        echo "Monitoring complete. Checking for expected output..."
+
+        # Look for required strings using extended regex
+        if grep -Eq 'MAIN: Temp: |SYSTEM_MONITOR: Uptime|Free Heap' monitor.log; then
+          echo "Expected log entries found"
+        else
+          echo "Expected output NOT found"
+          cat monitor.log
+          exit 1
+        fi
+
+        echo "Checking for crash patterns..."
+
+        # Look for crash/fatal error signatures
+        if grep -Eq 'Guru Meditation Error|panic|abort|stack smashing|WDT|Backtrace' monitor.log; then
+          echo "Crash pattern detected in monitor output!"
+          cat monitor.log
+          exit 1
+        fi
+
+        echo "No crash patterns detected. Serial output looks good."
+
+    - name: Upload monitor log
+      uses: actions/upload-artifact@v4
+      with:
+        name: serial-log
+        path: monitor.log
+
+  artifact_upload:
+    needs: monitor_output
+    runs-on: [self-hosted, Linux, X64]
+
+    steps:
+    - name: Upload firmware artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: esp32-firmware-${{ github.run_id }}-${{ github.run_attempt }}
+        path: |
+          build/esp32_meteopod.bin
+          build/esp32_meteopod.elf
+          build/esp32_meteopod.map
