@@ -22,7 +22,6 @@ jobs:
       run: |
         source /opt/esp-idf/export.sh
         cat /opt/sdkconfig.defaults >> sdkconfig
-        idf.py defconfig
         idf.py build
 
   flash:
