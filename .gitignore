@@ -4,3 +4,5 @@
 .clangd
 # sdkconfig
 sdkconfig.old
+sdkconfig.defaults
+sdkconfig
