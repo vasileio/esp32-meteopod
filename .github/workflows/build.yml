@@ -21,7 +21,7 @@ jobs:
       shell: bash
       run: |
         source /opt/esp-idf/export.sh
-        cat /opt/sdkconfig.defaults >> sdkconfig
+        cp /opt/sdkconfig.defaults .
         idf.py build
 
   flash:
@@ -37,7 +37,7 @@ jobs:
       run: |
         source /opt/esp-idf/export.sh
         /usr/local/bin/manage_usb_power cycle ttyUSB1
-        cat /opt/sdkconfig.defaults >> sdkconfig
+        cp /opt/sdkconfig.defaults .
         idf.py -p /dev/ttyUSB1 flash
 
   monitor_output:
