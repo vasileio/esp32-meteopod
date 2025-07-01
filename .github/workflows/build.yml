@@ -10,9 +10,6 @@ jobs:
   build:
     runs-on: [self-hosted, Linux, X64]
 
-    env:
-      IDF_VERSION: v5.4.1
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -29,9 +26,6 @@ jobs:
     needs: build
     runs-on: [self-hosted, Linux, X64]
 
-    env:
-      IDF_VERSION: v5.4.1
-
     steps:
     - name: Flash with ESP-IDF
       shell: bash
@@ -43,9 +37,6 @@ jobs:
   monitor_output:
     needs: flash
     runs-on: [self-hosted, Linux, X64]
-
-    env:
-      IDF_VERSION: v5.4.1
 
     steps:
     - name: Monitor serial output after flashing
