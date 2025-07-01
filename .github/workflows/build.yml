@@ -24,7 +24,6 @@ jobs:
         idf.py fullclean
         cp /opt/sdkconfig.defaults .
         idf.py build
-        cat sdkconfig
 
   flash:
     needs: build
@@ -39,7 +38,6 @@ jobs:
       run: |
         source /opt/esp-idf/export.sh
         /usr/local/bin/manage_usb_power cycle ttyUSB1
-        cp /opt/sdkconfig.defaults .
         idf.py -p /dev/ttyUSB1 flash
 
   monitor_output:
