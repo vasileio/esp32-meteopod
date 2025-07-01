@@ -21,8 +21,10 @@ jobs:
       shell: bash
       run: |
         source /opt/esp-idf/export.sh
+        idf.py fullclean
         cp /opt/sdkconfig.defaults .
         idf.py build
+        cat sdkconfig
 
   flash:
     needs: build
