@@ -409,8 +409,8 @@ CONFIG_PARTITION_TABLE_MD5=y
 #
 # Wi-Fi Configuration
 #
-CONFIG_WIFI_SSID="Sikinos_IoT"
-CONFIG_WIFI_PASS="Lateralus01@"
+# CONFIG_WIFI_SSID is not set
+# CONFIG_WIFI_PASS is not set
 # end of Wi-Fi Configuration
 
 #
