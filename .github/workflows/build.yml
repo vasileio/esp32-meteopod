@@ -90,14 +90,10 @@ jobs:
       id: timestamp
       run: echo "ts=$(date +'%Y%m%d-%H%M%S')" >> "$GITHUB_OUTPUT"
 
-    - name: Sanitize branch name
-      id: sanitize
-      run: echo "branch=$(echo '${GITHUB_REF_NAME}' | tr '/' '-')" >> "$GITHUB_OUTPUT"
-
     - name: Upload firmware artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: esp32-meteopod-firmware-${{ steps.sanitize.outputs.branch }}-${{ steps.timestamp.outputs.ts }}
+        name: esp32-meteopod-firmware-${{ steps.timestamp.outputs.ts }}
         path: |
           build/esp32_meteopod.bin
           build/esp32_meteopod.elf
