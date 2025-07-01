@@ -21,7 +21,7 @@ jobs:
       shell: bash
       run: |
         source /opt/esp-idf/export.sh
-        cp /opt/sdkconfig.defaults .
+        cat /opt/sdkconfig.defaults >> sdkconfig
         idf.py defconfig
         idf.py build
 
