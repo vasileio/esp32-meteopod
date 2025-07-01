@@ -1,6 +1,6 @@
-# esp32-rtos-envnode
+# esp32-meteopod
 
-An ESP32 RTOS-style embedded project that periodically reads sensor data (orientation and air quality) and can publish it via MQTT.  
+An ESP32 RTOS-style embedded project that periodically reads weather-related sensor data and can publish it via MQTT.  
 The project is in early development and aims to demonstrate real-time scheduling, ISR-triggered tasks, and sensor interfacing under FreeRTOS.
 
 ## Current Features
@@ -90,8 +90,8 @@ To build and flash this project, you need to install the [Espressif IoT Developm
 
 4. Clone this project and build:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/esp32-rtos-envnode.git
-   cd esp32-rtos-envnode
+   git clone https://github.com/vasileio/esp32-meteopod.git
+   cd esp32-meteopod
    idf.py set-target esp32
    idf.py build
    ```
@@ -131,8 +131,8 @@ See the full guide:
 3. Clone and build this project:
 
    ```bash
-   git clone https://github.com/YOUR_USERNAME/esp32-rtos-envnode.git
-   cd esp32-rtos-envnode
+   git clone https://github.com/vasileio/esp32-meteopod.git
+   cd esp32-meteopod
    idf.py set-target esp32
    idf.py build
    ```
