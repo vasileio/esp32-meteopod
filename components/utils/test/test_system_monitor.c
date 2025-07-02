@@ -1,8 +1,62 @@
 #include "unity.h"
 #include "system_monitor.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_timer.h"
+#include "esp_log.h"
+#include <stdarg.h>
+#include <string.h>
+
+#define LOG_BUF_SIZE 512
+
+static char   s_log_buf[LOG_BUF_SIZE];
+static size_t s_log_buf_len;
+static int  (*s_original_vprintf)(const char*, va_list);
+
+// This replacement vprintf just appends into s_log_buf
+static int test_vprintf(const char *fmt, va_list ap)
+{
+    int remaining = LOG_BUF_SIZE - s_log_buf_len - 1;
+    if (remaining <= 0) {
+        return 0; // buffer full
+    }
+    int written = vsnprintf(s_log_buf + s_log_buf_len, remaining, fmt, ap);
+    if (written > 0) {
+        s_log_buf_len += written;
+    }
+    return written;
+}
+
+TEST_CASE("log_system_metrics emits the three expected lines", "[system_monitor][logging]")
+{
+    // 1) Swap in our hook, saving the original
+    s_log_buf_len      = 0;
+    s_log_buf[0]       = '\0';
+    s_original_vprintf = esp_log_set_vprintf(test_vprintf);
+
+    // 2) Call the function under test
+    system_metrics_t m = {
+        .free_heap       = 1000,
+        .min_free_heap   =  900,
+        .uptime_ms       =   50,
+        .stack_watermark =   20
+    };
+    log_system_metrics(&m);
+
+    // 3) Restore the original writer so other tests aren’t affected
+    esp_log_set_vprintf(s_original_vprintf);
+
+    // 4) Now assert that our buffer contains each expected substring
+    TEST_ASSERT_TRUE_MESSAGE(
+        strstr(s_log_buf, "Free Heap: 1000 bytes, Min Free Heap: 900 bytes") != NULL,
+        "Missing or incorrect first log line"
+    );
+    TEST_ASSERT_TRUE_MESSAGE(
+        strstr(s_log_buf, "Uptime: 50 ms") != NULL,
+        "Missing or incorrect uptime line"
+    );
+    TEST_ASSERT_TRUE_MESSAGE(
+        strstr(s_log_buf, "Current Task Stack High Water Mark: 20 bytes") != NULL,
+        "Missing or incorrect stack watermark line"
+    );
+}
 
 TEST_CASE("get_system_metrics returns sane, non crashing values", "[system_monitor]")
 {
@@ -28,20 +82,4 @@ TEST_CASE("get_system_metrics returns sane, non crashing values", "[system_monit
     TEST_ASSERT_TRUE_MESSAGE(
         m2.uptime_ms >= m1.uptime_ms,
         "uptime_ms should not go backwards");
-}
-
-TEST_CASE("log_system_metrics runs without crashing", "[system_monitor]")
-{
-    system_metrics_t m = {
-        .free_heap       = 1234,
-        .min_free_heap   =  567,
-        .uptime_ms       =  890,
-        .stack_watermark =   42
-    };
-
-    // We won't capture the UART output here,
-    // but we at least verify that calling it doesn't fault.
-    log_system_metrics(&m);
-
-    TEST_PASS(); // always succeed if we get here
 }
