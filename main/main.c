@@ -1,18 +1,4 @@
-#include <stdio.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/queue.h"
-#include "freertos/semphr.h"
-#include "driver/uart.h"
-#include "driver/gpio.h"
-#include "esp_log.h"
-#include "esp_system.h"
-#include "esp_timer.h"
-#include "esp_task_wdt.h"
-
-#include "wifi.h"
-#include "system_monitor.h"
-#include "sensors.h"
+#include "include/main.h"
 
 #define TAG "MAIN"
 
