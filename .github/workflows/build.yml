@@ -27,6 +27,13 @@ jobs:
         source /opt/esp-idf/export.sh
         idf.py build
 
+    - name: Build unit test app
+      shell: bash
+      run: |
+        source /opt/esp-idf/export.sh
+        idf.py -C unity-app -DTESTS_ALL=1 fullclean
+        idf.py -C unity-app -DTESTS_ALL=1 build
+
   flash:
     needs: build
     runs-on: [self-hosted, Linux, X64]
