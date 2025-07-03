@@ -1,14 +1,4 @@
 #include "wifi.h"
-#include "sdkconfig.h"
-
-#include "freertos/FreeRTOS.h"
-#include "freertos/event_groups.h"
-#include "esp_event.h"
-#include "esp_log.h"
-#include "esp_wifi.h"
-#include "esp_netif.h"
-#include "esp_netif_ip_addr.h"
-#include "nvs_flash.h"
 
 #define WIFI_SSID CONFIG_WIFI_SSID
 #define WIFI_PASS CONFIG_WIFI_PASS
