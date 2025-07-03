@@ -105,3 +105,12 @@ jobs:
           build/esp32_meteopod.bin
           build/esp32_meteopod.elf
           build/esp32_meteopod.map
+
+    - name: Upload test application artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: esp32-meteopod-test-app-${{ steps.timestamp.outputs.ts }}
+        path: |
+          unity-app/build/esp32_meteopod_test_app.bin
+          unity-app/build/esp32_meteopod_test_app.elf
+          unity-app/build/esp32_meteopod_test_app.map
