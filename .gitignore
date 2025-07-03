@@ -6,4 +6,4 @@
 sdkconfig.old
 sdkconfig.defaults
 sdkconfig
-/unity-app
+/unity-app/build
