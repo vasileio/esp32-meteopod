@@ -27,6 +27,13 @@ jobs:
         source /opt/esp-idf/export.sh
         idf.py build
 
+    - name: Build unit test app
+      shell: bash
+      run: |
+        source /opt/esp-idf/export.sh
+        idf.py -C unity-app -DTESTS_ALL=1 fullclean
+        idf.py -C unity-app -DTESTS_ALL=1 build
+
   flash:
     needs: build
     runs-on: [self-hosted, Linux, X64]
@@ -98,3 +105,12 @@ jobs:
           build/esp32_meteopod.bin
           build/esp32_meteopod.elf
           build/esp32_meteopod.map
+
+    - name: Upload test application artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: esp32-meteopod-test-app-${{ steps.timestamp.outputs.ts }}
+        path: |
+          unity-app/build/esp32_meteopod_test_app.bin
+          unity-app/build/esp32_meteopod_test_app.elf
+          unity-app/build/esp32_meteopod_test_app.map
