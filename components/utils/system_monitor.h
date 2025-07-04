@@ -1,10 +1,13 @@
 #pragma once
 
+#include <stdint.h>
+
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include <stdint.h>
+
+#include "app_context.h"
 
 // A simple POD to hold all of your stats
 typedef struct {

@@ -13,16 +13,9 @@
 #include "esp_task_wdt.h"
 #include "esp_err.h"
 
+#include "app_context.h"
 #include "i2c.h"
 #include "wifi.h"
 #include "system_monitor.h"
-#include "sensors.h"
 #include "sht31.h"
 #include "dfrobot_rainfall_sensor.h"
-
-
-void init_uart(void);
-void periodic_sensor_cb(void *arg);
-
-// expose the task handle so tests can stub/inspect it
-extern TaskHandle_t sensorTaskHandle;
