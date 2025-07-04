@@ -126,7 +126,7 @@ void app_main(void)
     /*––– Initialize DFRobot rain-bucket sensor on same I2C bus –––*/
     err = DFRobot_rainfall_sensor_init(&rain_sensor,
                                        bus_handle,
-                                       DFRBOT_RAINFALL_SENSOR_I2C_ADDR_DEFAULT,
+                                       DFROBOT_RAINFALL_SENSOR_I2C_ADDR_DEFAULT,
                                        I2C_SPEED_STANDARD_MODE);
     if (ESP_OK != err) {
         ESP_LOGE(TAG, "Rain sensor init failed: %s", esp_err_to_name(err));

@@ -10,7 +10,7 @@
 #include "driver/i2c_master.h"
 
 /* Default 7-bit I²C address for the DFRobot rain-bucket sensor */
-#define DFRBOT_RAINFALL_SENSOR_I2C_ADDR_DEFAULT   0x1D
+#define DFROBOT_RAINFALL_SENSOR_I2C_ADDR_DEFAULT   0x1D
 
 /* Register addresses */
 #define DFROBOT_RAINFALL_SENSOR_REG_PID            0x00
