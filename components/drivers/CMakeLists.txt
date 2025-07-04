@@ -1,5 +1,5 @@
 idf_component_register(
-  SRCS    "wifi.c"
+  SRCS    "wifi.c" "i2c.c"
   INCLUDE_DIRS "."
   REQUIRES
     driver                      # for common driver_*/ APIs

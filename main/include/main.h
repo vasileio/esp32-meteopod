@@ -11,10 +11,14 @@
 #include "esp_system.h"
 #include "esp_timer.h"
 #include "esp_task_wdt.h"
+#include "esp_err.h"
 
 #include "wifi.h"
 #include "system_monitor.h"
 #include "sensors.h"
+#include "sht31.h"
+#include "i2c.h"
+
 
 void init_uart(void);
 void periodic_sensor_cb(void *arg);
