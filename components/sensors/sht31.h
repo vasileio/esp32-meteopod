@@ -8,6 +8,9 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+/* Default 7-bit I²C address for SHT31 (ADDR pin low) */
+#define SHT31_I2C_ADDR_DEFAULT   0x44
+
 #define SHT31_I2C_SPEED   100000U
 #define SHT31_CRC8_INIT  0xFF
 

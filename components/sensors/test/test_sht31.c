@@ -5,46 +5,10 @@
 #include "esp_err.h"
 #include <string.h>
 
-/*--------------------------------------------------
- * Stubs for IDF / FreeRTOS symbols
- *-------------------------------------------------*/
-static esp_err_t stub_transmit_ret;
-static esp_err_t stub_receive_ret;
-static uint8_t    fake_buf[6];
-
-/* global handle used by driver */
-i2c_master_dev_handle_t dev_handle;
-
-/* pretend adding the device always succeeds */
-esp_err_t i2c_master_bus_add_device(i2c_master_bus_handle_t bus,
-                                    const i2c_device_config_t *cfg,
-                                    i2c_master_dev_handle_t *out_handle)
-{
-    (void)bus; (void)cfg;
-    *out_handle = (i2c_master_dev_handle_t)0x1234;
-    return ESP_OK;
-}
-
-/* transmit stub: return whatever test sets */
-esp_err_t i2c_master_transmit(i2c_master_dev_handle_t dev,
-                              const uint8_t *data,
-                              size_t len,
-                              int xfer_timeout_ms)
-{
-    (void)dev; (void)data; (void)len; (void)xfer_timeout_ms;
-    return stub_transmit_ret;
-}
-
-/* receive stub: copy from fake_buf, return whatever test sets */
-esp_err_t i2c_master_receive(i2c_master_dev_handle_t dev,
-                             uint8_t *data,
-                             size_t len,
-                             int xfer_timeout_ms)
-{
-    (void)dev; (void)xfer_timeout_ms;
-    memcpy(data, fake_buf, len);
-    return stub_receive_ret;
-}
+/* pull in the shared stubs from i2c_test_stubs.c */
+extern esp_err_t   stub_transmit_ret;
+extern esp_err_t   stub_receive_ret;
+extern uint8_t     fake_buf[];
 
 /* simple CRC‐8-D poly(0x31), init 0xFF for stubbing esp_rom_crc8_be */
 static uint8_t __crc8_be(uint8_t crc, const uint8_t *buf, uint32_t len)
@@ -65,18 +29,6 @@ uint8_t esp_rom_crc8_be(uint8_t crc, const uint8_t *buf, uint32_t len)
 {
     return __crc8_be(crc, buf, len);
 }
-
-/*--------------------------------------------------
- * Unity test setup/teardown
- *-------------------------------------------------*/
-void setUp(void)
-{
-    stub_transmit_ret = ESP_OK;
-    stub_receive_ret  = ESP_OK;
-    memset(fake_buf, 0, sizeof(fake_buf));
-}
-
-void tearDown(void) { }
 
 /*--------------------------------------------------
  * Test cases

@@ -15,6 +15,9 @@ QueueHandle_t commandQueue;
 sensor_data_t shared_sensor_data;
 SemaphoreHandle_t sensorDataMutex;
 
+static i2c_master_bus_handle_t bus_handle;
+static DFRobot_rainfall_sensor_t rain_sensor;
+
 #define UART_PORT UART_NUM_1
 #define BUF_SIZE 1024
 #define UART_RX_PIN 16
@@ -101,14 +104,38 @@ void blink_task(void *pvParameters)
 
 void app_main(void)
 {
-    ESP_LOGI(TAG, "System booting...");
+    ESP_LOGI(TAG, "System booting…");
+
     init_uart();
     wifi_init_sta();
-    i2c_master_bus_handle_t bus_handle;
+
     esp_err_t err = i2c_init(&bus_handle);
-    if (err != ESP_OK) {
+    if (ESP_OK != err) {
         ESP_LOGE(TAG, "I2C master init failed: %s", esp_err_to_name(err));
-        return;  // or retry/abort as appropriate
+        return;
+    }
+
+    /*––– Initialize SHT31 on I2C bus –––*/
+    err = sht31_init(bus_handle,
+                     SHT31_I2C_ADDR_DEFAULT,
+                     I2C_SPEED_STANDARD_MODE);
+    if (ESP_OK != err) {
+        ESP_LOGE(TAG, "SHT31 init failed: %s", esp_err_to_name(err));
+    }
+
+    /*––– Initialize DFRobot rain-bucket sensor on same I2C bus –––*/
+    err = DFRobot_rainfall_sensor_init(&rain_sensor,
+                                       bus_handle,
+                                       DFROBOT_RAINFALL_SENSOR_I2C_ADDR_DEFAULT,
+                                       I2C_SPEED_STANDARD_MODE);
+    if (ESP_OK != err) {
+        ESP_LOGE(TAG, "Rain sensor init failed: %s", esp_err_to_name(err));
+    } else {
+        /* optional: verify PID/VID */
+        err = DFRobot_rainfall_sensor_begin(&rain_sensor);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Rain sensor probe failed: %s", esp_err_to_name(err));
+        }
     }
 
     sensorDataQueue = xQueueCreate(10, sizeof(sensor_data_t));

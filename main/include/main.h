@@ -13,11 +13,12 @@
 #include "esp_task_wdt.h"
 #include "esp_err.h"
 
+#include "i2c.h"
 #include "wifi.h"
 #include "system_monitor.h"
 #include "sensors.h"
 #include "sht31.h"
-#include "i2c.h"
+#include "dfrobot_rainfall_sensor.h"
 
 
 void init_uart(void);
