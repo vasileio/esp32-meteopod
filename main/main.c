@@ -104,6 +104,12 @@ void app_main(void)
     ESP_LOGI(TAG, "System booting...");
     init_uart();
     wifi_init_sta();
+    i2c_master_bus_handle_t bus_handle;
+    esp_err_t err = i2c_init(&bus_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "I2C master init failed: %s", esp_err_to_name(err));
+        return;  // or retry/abort as appropriate
+    }
 
     sensorDataQueue = xQueueCreate(10, sizeof(sensor_data_t));
     commandQueue = xQueueCreate(10, sizeof(uart_event_t));

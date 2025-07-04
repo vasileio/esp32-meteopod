@@ -3,6 +3,36 @@
 extern SemaphoreHandle_t sensorDataMutex;
 extern sensor_data_t shared_sensor_data;
 
+static const char *TAG = "sensors";
+
+esp_err_t init_sensors(void)
+{
+    esp_err_t err;
+    i2c_master_bus_handle_t bus_handle;
+
+    // 1) Get existing I2C bus handle, or initialize if not yet created
+    err = i2c_master_get_bus_handle(I2C_PORT, &bus_handle);
+    if (err == ESP_ERR_INVALID_STATE) {
+        // bus wasn’t initialized yet, so do it now
+        if ((err = i2c_init(&bus_handle)) != ESP_OK) {
+            ESP_LOGE(TAG, "I2C master init failed: %s", esp_err_to_name(err));
+            return err;
+        }
+    } else if (err != ESP_OK) {
+        // some other failure retrieving the handle
+        ESP_LOGE(TAG, "Failed to get I2C bus handle: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    // 2) Register our SHT31 on that bus
+    if ((err = sht31_init(bus_handle, 0x44, SHT31_I2C_SPEED)) != ESP_OK) {
+        ESP_LOGE(TAG, "SHT31 init failed: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    return ESP_OK;
+}
+
 void sensor_temp_hum_task(void *pvParameters)
 {
     while (1) {
