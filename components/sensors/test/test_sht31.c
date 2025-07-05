@@ -1,7 +1,7 @@
 // test_sht31.c
 
 #include "unity.h"
-#include "sensors.h"        /* your public sensor API header */
+#include "sht31.h"
 #include "esp_err.h"
 #include <string.h>
 
