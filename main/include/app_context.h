@@ -12,6 +12,7 @@
 
 #include "dfrobot_rainfall_sensor.h"
 #include "sht31.h"
+#include "mqtt.h"
 
 typedef struct {
     /* Buses & peripherals */
@@ -33,6 +34,12 @@ typedef struct {
 
     /* Timer */
     esp_timer_handle_t        periodic_timer;
+
+    /* MQTT */
+    esp_mqtt_client_handle_t mqtt_client;
+    TaskHandle_t             mqttTaskHandle;
+    QueueHandle_t            mqttPublishQueue;
+    EventGroupHandle_t       mqttEventGroup; 
 } app_ctx_t;
 
 #endif  // APP_CONTEXT_H

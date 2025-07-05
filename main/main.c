@@ -73,4 +73,5 @@ void app_main(void)
     xTaskCreate(watchdog_task,        "watchdog",  2048, &ctx, 6, &ctx.watchdogTaskHandle);
     xTaskCreate(blink_task,           "blink",     3072, &ctx, 1, &ctx.blinkTaskHandle);
     xTaskCreate(system_monitor_task,  "monitor",   4096, &ctx, 1, &ctx.monitorTaskHandle);
+    xTaskCreate(mqtt_task,            "mqtt_task", 4096, &ctx, 5, &ctx.mqttTaskHandle);
 }
