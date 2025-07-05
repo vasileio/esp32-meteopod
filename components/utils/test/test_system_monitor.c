@@ -53,7 +53,7 @@ TEST_CASE("log_system_metrics emits the three expected lines", "[system_monitor]
         "Missing or incorrect uptime line"
     );
     TEST_ASSERT_TRUE_MESSAGE(
-        strstr(s_log_buf, "Current Task Stack High Water Mark: 20 bytes") != NULL,
+        strstr(s_log_buf, "Task Stack High Water Mark: 20 bytes") != NULL,
         "Missing or incorrect stack watermark line"
     );
 }

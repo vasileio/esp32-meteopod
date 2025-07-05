@@ -7,7 +7,7 @@ include($ENV{IDF_PATH}/tools/cmake/version.cmake)
 # 1. Add here if the component is compatible with IDF >= v4.3
 set(EXTRA_COMPONENT_DIRS "../components")
 
-set(TEST_COMPONENTS "utils")
+set(TEST_COMPONENTS "utils" "sensors")
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(esp32_meteopod_test_app)
