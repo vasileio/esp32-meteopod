@@ -27,11 +27,19 @@ void system_monitor_task(void *pvParameters)
 {
     /* now consistent with other tasks: accept app_ctx_t* */
     app_ctx_t *ctx = pvParameters;
-    (void)ctx;  // unused for now
+    mqtt_publish_req_t heartbeat = {
+            .topic  = "Meteopod/status",
+            .payload= "online",
+            .len    = strlen("online"),
+            .qos    = 1,
+            .retain = 1
+    };
 
-    while (1) {
+    while (1) 
+    {
         system_metrics_t metrics = get_system_metrics();
         log_system_metrics(&metrics);
+        xQueueSend(ctx->mqttPublishQueue, &heartbeat, portMAX_DELAY);
         vTaskDelay(pdMS_TO_TICKS(10000));
     }
 }
