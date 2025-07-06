@@ -28,7 +28,7 @@ void system_monitor_task(void *pvParameters)
     /* now consistent with other tasks: accept app_ctx_t* */
     app_ctx_t *ctx = pvParameters;
     mqtt_publish_req_t heartbeat = {
-            .topic  = "Meteopod/status",
+            .topic  = "meteopod/status",
             .payload= "online",
             .len    = strlen("online"),
             .qos    = 1,
