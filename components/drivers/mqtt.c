@@ -52,7 +52,7 @@ static void mqtt_event_handler(void *arg,
             break;
 
         default:
-            ESP_LOGD(TAG, "Unhandled MQTT event id=%d", event_id);
+            ESP_LOGD(TAG, "Unhandled MQTT event id=%" PRIi32, event_id);
             break;
     }
 }
