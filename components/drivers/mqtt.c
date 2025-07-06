@@ -2,9 +2,6 @@
 
 #define TAG "mqtt_task"
 
-/* Forward declaration of application context pointer */
-static app_ctx_t *s_ctx = NULL;
-
 /**
  * @brief MQTT event handler
  *
@@ -22,9 +19,8 @@ static void mqtt_event_handler(void *arg,
                                int32_t event_id,
                                void *event_data)
 {
-    /* Suppress unused parameter warnings */
-    (void)arg;
-    (void)base;
+    /* grab your app context from arg */
+    app_ctx_t *ctx = (app_ctx_t*)arg;
 
     /* Cast to MQTT event handle */
     esp_mqtt_event_handle_t evt = (esp_mqtt_event_handle_t)event_data;
@@ -35,12 +31,12 @@ static void mqtt_event_handler(void *arg,
     switch (event_id) {
         case MQTT_EVENT_CONNECTED:
             ESP_LOGI(TAG, "MQTT connected");
-            xEventGroupSetBits(s_ctx->mqttEventGroup, MQTT_CONNECTED_BIT);
+            xEventGroupSetBits(ctx->mqttEventGroup, MQTT_CONNECTED_BIT);
             break;
 
         case MQTT_EVENT_DISCONNECTED:
             ESP_LOGW(TAG, "MQTT disconnected");
-            xEventGroupClearBits(s_ctx->mqttEventGroup, MQTT_CONNECTED_BIT);
+            xEventGroupClearBits(ctx->mqttEventGroup, MQTT_CONNECTED_BIT);
             break;
 
         case MQTT_EVENT_PUBLISHED:
@@ -92,7 +88,7 @@ void mqtt_task(void *pvParameters)
     esp_mqtt_client_register_event(ctx->mqtt_client,
                                    ESP_EVENT_ANY_ID,
                                    mqtt_event_handler,
-                                   NULL);
+                                   ctx);
     esp_mqtt_client_start(ctx->mqtt_client);
 
     /*------------------------------------------------------------------------*/
