@@ -1,6 +1,6 @@
 #include "mqtt.h"
 
-static const char *TAG = "MQTT_TASK";
+#define TAG "mqtt_task"
 
 /* Forward declaration of application context pointer */
 static app_ctx_t *s_ctx = NULL;
