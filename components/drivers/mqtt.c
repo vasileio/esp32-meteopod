@@ -8,88 +8,156 @@ static app_ctx_t *s_ctx = NULL;
 /**
  * @brief MQTT event handler
  *
- * Called by the ESP-MQTT component on various MQTT events.
- * Sets or clears the connected bit in the event group.
+ * Invoked by the ESP-MQTT component on various MQTT events.
+ * Updates the MQTT_CONNECTED_BIT in the event group to reflect
+ * the current connection status, and logs key events.
  *
- * @param arg Unused
- * @param base Event base identifier
- * @param event_id Event identifier
- * @param event_data Pointer to event-specific data
+ * @param arg          Application context pointer (unused here)
+ * @param base         Event base identifier (unused)
+ * @param event_id     MQTT event identifier
+ * @param event_data   Pointer to event-specific data (esp_mqtt_event_handle_t)
  */
-static void mqtt_event_handler(void *arg, esp_event_base_t base,
-                               int32_t event_id, void *event_data)
+static void mqtt_event_handler(void *arg,
+                               esp_event_base_t base,
+                               int32_t event_id,
+                               void *event_data)
 {
-    esp_mqtt_event_handle_t evt = event_data;
+    /* Suppress unused parameter warnings */
+    (void)arg;
+    (void)base;
+
+    /* Cast to MQTT event handle */
+    esp_mqtt_event_handle_t evt = (esp_mqtt_event_handle_t)event_data;
+
+    /*------------------------------------------------------------------------*/
+    /* Handle each event type                                                 */
+    /*------------------------------------------------------------------------*/
     switch (event_id) {
-    case MQTT_EVENT_CONNECTED:
-        ESP_LOGI(TAG, "MQTT connected");
-        xEventGroupSetBits(s_ctx->mqttEventGroup, MQTT_CONNECTED_BIT);
-        break;
-    case MQTT_EVENT_DISCONNECTED:
-        ESP_LOGW(TAG, "MQTT disconnected");
-        xEventGroupClearBits(s_ctx->mqttEventGroup, MQTT_CONNECTED_BIT);
-        break;
-    case MQTT_EVENT_PUBLISHED:
-        ESP_LOGI(TAG, "Message published, msg_id=%d", evt->msg_id);
-        break;
-    case MQTT_EVENT_ERROR:
-        ESP_LOGE(TAG, "MQTT error");
-        break;
-    default:
-        break;
+        case MQTT_EVENT_CONNECTED:
+            ESP_LOGI(TAG, "MQTT connected");
+            xEventGroupSetBits(s_ctx->mqttEventGroup, MQTT_CONNECTED_BIT);
+            break;
+
+        case MQTT_EVENT_DISCONNECTED:
+            ESP_LOGW(TAG, "MQTT disconnected");
+            xEventGroupClearBits(s_ctx->mqttEventGroup, MQTT_CONNECTED_BIT);
+            break;
+
+        case MQTT_EVENT_PUBLISHED:
+            ESP_LOGI(TAG, "Message published (msg_id=%d)", evt->msg_id);
+            break;
+
+        case MQTT_EVENT_ERROR:
+            ESP_LOGE(TAG, "MQTT error occurred");
+            break;
+
+        default:
+            ESP_LOGD(TAG, "Unhandled MQTT event id=%d", event_id);
+            break;
     }
 }
 
+
+/**
+ * @brief MQTT task to manage connection and publish messages.
+ *
+ * Initializes the MQTT client, publishes a startup message once connected,
+ * then enters the main loop to handle queued publish requests.
+ *
+ * @param pvParameters Pointer to app_ctx_t containing application context.
+ */
 void mqtt_task(void *pvParameters)
 {
-    /* Store context pointer for handler access */
-    s_ctx = (app_ctx_t *)pvParameters;
+    app_ctx_t           *ctx = (app_ctx_t *)pvParameters;
+    mqtt_publish_req_t   req;
+    EventBits_t          bits;
 
-    /* Create event group and publish queue */
-    s_ctx->mqttEventGroup   = xEventGroupCreate();
-    s_ctx->mqttPublishQueue = xQueueCreate(10, sizeof(mqtt_publish_req_t));
-    configASSERT(s_ctx->mqttEventGroup && s_ctx->mqttPublishQueue);
+    /*------------------------------------------------------------------------*/
+    /* Create synchronization primitives                                      */
+    /*------------------------------------------------------------------------*/
+    ctx->mqttEventGroup   = xEventGroupCreate();
+    configASSERT(ctx->mqttEventGroup);
 
-    /* Configure MQTT client from menuconfig */
-    esp_mqtt_client_config_t cfg = {
-        .broker.address.uri = "mqtt://192.168.1.118:1883",
+    ctx->mqttPublishQueue = xQueueCreate(10, sizeof(mqtt_publish_req_t));
+    configASSERT(ctx->mqttPublishQueue);
+
+    /*------------------------------------------------------------------------*/
+    /* Configure and start MQTT client                                        */
+    /*------------------------------------------------------------------------*/
+    const esp_mqtt_client_config_t mqtt_cfg = {
+        .broker.address.uri = "mqtt://192.168.1.118:1883"
     };
-    s_ctx->mqtt_client = esp_mqtt_client_init(&cfg);
-    esp_mqtt_client_register_event(s_ctx->mqtt_client,
+
+    ctx->mqtt_client = esp_mqtt_client_init(&mqtt_cfg);
+    esp_mqtt_client_register_event(ctx->mqtt_client,
                                    ESP_EVENT_ANY_ID,
                                    mqtt_event_handler,
                                    NULL);
-    esp_mqtt_client_start(s_ctx->mqtt_client);
+    esp_mqtt_client_start(ctx->mqtt_client);
 
-    mqtt_publish_req_t req;
+    /*------------------------------------------------------------------------*/
+    /* Publish a “startup” message once connected                             */
+    /*------------------------------------------------------------------------*/
+    bits = xEventGroupWaitBits(
+        ctx->mqttEventGroup,
+        MQTT_CONNECTED_BIT,
+        pdFALSE,              /* don’t clear bit on exit */
+        pdTRUE,               /* wait for bit to be set */
+        pdMS_TO_TICKS(5000)   /* 5 s timeout */
+    );
+
+    if (bits & MQTT_CONNECTED_BIT) {
+        int startup_id = esp_mqtt_client_publish(
+            ctx->mqtt_client,
+            "meteopod",         /* topic */
+            "device online",    /* payload */
+            0,                  /* use strlen internally */
+            1,                  /* QoS 1 */
+            0                   /* non-retained */
+        );
+        ESP_LOGI(TAG, "Startup message on 'meteopod' published (msg_id=%d)", startup_id);
+    } else {
+        ESP_LOGW(TAG, "Startup message dropped: not connected");
+    }
+
+    /*------------------------------------------------------------------------*/
+    /* Main loop: wait for publish requests, then send when connected         */
+    /*------------------------------------------------------------------------*/
     for (;;) {
-        /* Wait indefinitely for a publish request */
-        if (xQueueReceive(s_ctx->mqttPublishQueue, &req, portMAX_DELAY) == pdTRUE) {
-            /* Wait up to 5 seconds for MQTT connection */
-            EventBits_t bits = xEventGroupWaitBits(
-                s_ctx->mqttEventGroup,
+        /* Block indefinitely until a publish request arrives */
+        if (xQueueReceive(ctx->mqttPublishQueue, &req, portMAX_DELAY) == pdTRUE) {
+            /* Wait up to 5 s for the MQTT_CONNECTED_BIT */
+            bits = xEventGroupWaitBits(
+                ctx->mqttEventGroup,
                 MQTT_CONNECTED_BIT,
-                pdFALSE,    /* Don't clear bit on exit */
-                pdTRUE,     /* Wait for bit to be set */
-                pdMS_TO_TICKS(5000)  /* Timeout */
+                pdFALSE,
+                pdTRUE,
+                pdMS_TO_TICKS(5000)
             );
 
             if (bits & MQTT_CONNECTED_BIT) {
                 int msg_id = esp_mqtt_client_publish(
-                    s_ctx->mqtt_client,
+                    ctx->mqtt_client,
                     req.topic,
                     req.payload,
                     req.len,
                     req.qos,
                     req.retain
                 );
-                ESP_LOGI(TAG, "Published to %s (id=%d)", req.topic, msg_id);
+                ESP_LOGI(TAG, "Published to %s (msg_id=%d)", req.topic, msg_id);
             } else {
-                ESP_LOGW(TAG, "Publish dropped, not connected");
+                ESP_LOGW(TAG, "Dropped publish: MQTT not connected");
             }
         }
     }
 
-    /* Should never reach here */
+    /*------------------------------------------------------------------------*/
+    /* Cleanup (never reached)                                                */
+    /*------------------------------------------------------------------------*/
+    esp_mqtt_client_stop(ctx->mqtt_client);
+    esp_mqtt_client_destroy(ctx->mqtt_client);
+    vEventGroupDelete(ctx->mqttEventGroup);
+    vQueueDelete(ctx->mqttPublishQueue);
     vTaskDelete(NULL);
 }
+
