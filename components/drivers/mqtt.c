@@ -105,13 +105,13 @@ void mqtt_task(void *pvParameters)
     if (bits & MQTT_CONNECTED_BIT) {
         int startup_id = esp_mqtt_client_publish(
             ctx->mqtt_client,
-            "meteopod",         /* topic */
-            "device online",    /* payload */
+            "meteopod/status",    /* topic */
+            "device boot",       /* payload */
             0,                  /* use strlen internally */
             1,                  /* QoS 1 */
-            0                   /* non-retained */
+            1                   /* retained */
         );
-        ESP_LOGI(TAG, "Startup message on 'meteopod' published (msg_id=%d)", startup_id);
+        ESP_LOGI(TAG, "Startup message on 'meteopod/status' published (msg_id=%d)", startup_id);
     } else {
         ESP_LOGW(TAG, "Startup message dropped: not connected");
     }
