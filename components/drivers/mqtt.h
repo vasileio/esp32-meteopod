@@ -1,6 +1,7 @@
 #ifndef COMPONENTS_DRIVERS_MQTT_INCLUDE_MQTT_H_
 #define COMPONENTS_DRIVERS_MQTT_INCLUDE_MQTT_H_
 
+#include <inttypes.h>
 #include "esp_log.h"
 #include "mqtt_client.h"
 #include "freertos/FreeRTOS.h"
