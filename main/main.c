@@ -43,28 +43,29 @@ void app_main(void)
         ESP_LOGE(TAG, "I2C init failed: %s", esp_err_to_name(err));
         return;
     }
+    /* 1) Read raw MAC */
+    esp_read_mac(ctx.device_mac, ESP_MAC_WIFI_STA);
 
-    /* SHT31 */
-    err = sht31_init(ctx.i2c_bus,
-                     SHT31_I2C_ADDR_DEFAULT,
-                     I2C_SPEED_STANDARD_MODE);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "SHT31 init failed: %s", esp_err_to_name(err));
-    }
+    /* 2) Build MAC string (uppercase, no separators) */
+    snprintf(ctx.device_mac_str,
+             MAC_STR_LEN,
+             "%02X%02X%02X%02X%02X%02X",
+             ctx.device_mac[0],
+             ctx.device_mac[1],
+             ctx.device_mac[2],
+             ctx.device_mac[3],
+             ctx.device_mac[4],
+             ctx.device_mac[5]);
 
-    /* Rain sensor */
-    err = DFRobot_rainfall_sensor_init(&ctx.rain_sensor,
-                                       ctx.i2c_bus,
-                                       DFROBOT_RAINFALL_SENSOR_I2C_ADDR_DEFAULT,
-                                       I2C_SPEED_STANDARD_MODE);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Rain init failed: %s", esp_err_to_name(err));
-    } else {
-        if (DFRobot_rainfall_sensor_begin(&ctx.rain_sensor) != ESP_OK) {
-            ESP_LOGE(TAG, "Rain probe failed");
-        }
-    }
+    /* 3) Build topic prefix "meteopod/<MAC>" */
+    snprintf(ctx.topic_prefix,
+             TOPIC_PREFIX_LEN,
+             "meteopod/%s",
+             ctx.device_mac_str);
 
+    /* 4) Print them out */
+    ESP_LOGI(TAG, "Device MAC: %s",        ctx.device_mac_str);
+    ESP_LOGI(TAG, "MQTT topic prefix: %s", ctx.topic_prefix);
     /* Queues & mutex */
     ctx.commandQueue    = xQueueCreate(10, sizeof(uart_event_t));
     ctx.sensorDataMutex = xSemaphoreCreateMutex();
@@ -73,4 +74,5 @@ void app_main(void)
     xTaskCreate(watchdog_task,        "watchdog",  2048, &ctx, 6, &ctx.watchdogTaskHandle);
     xTaskCreate(blink_task,           "blink",     3072, &ctx, 1, &ctx.blinkTaskHandle);
     xTaskCreate(system_monitor_task,  "monitor",   4096, &ctx, 1, &ctx.monitorTaskHandle);
+    xTaskCreate(mqtt_task,            "mqtt_task", 4096, &ctx, 5, &ctx.mqttTaskHandle);
 }

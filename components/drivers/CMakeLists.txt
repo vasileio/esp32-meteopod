@@ -1,5 +1,5 @@
 idf_component_register(
-  SRCS    "wifi.c" "i2c.c" "uart.c"
+  SRCS    "wifi.c" "i2c.c" "uart.c" "mqtt.c"
   INCLUDE_DIRS "." "../../main/include"
   REQUIRES
     driver                      # for common driver_*/ APIs
@@ -10,4 +10,6 @@ idf_component_register(
     log                         # if you use ESP_LOG*
     nvs_flash
     sensors
+    mqtt
+    utils
 )

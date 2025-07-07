@@ -25,13 +25,37 @@ void log_system_metrics(const system_metrics_t *metrics)
 
 void system_monitor_task(void *pvParameters)
 {
-    /* now consistent with other tasks: accept app_ctx_t* */
     app_ctx_t *ctx = pvParameters;
-    (void)ctx;  // unused for now
+    char heartbeat_topic[TOPIC_PREFIX_LEN + sizeof("/availability")];
 
-    while (1) {
+    /* Build the heartbeat topic "<prefix>/availability" */
+    esp_err_t err = utils_build_topic(
+        ctx->topic_prefix,
+        "availability",
+        heartbeat_topic,
+        sizeof(heartbeat_topic)
+    );
+
+    if (ESP_OK != err) 
+    {
+        ESP_LOGE(TAG, "Failed to build heartbeat topic (err=%d)", err);
+        vTaskDelete(NULL);
+        return;
+    }
+
+    mqtt_publish_req_t heartbeat = {
+            .topic  = heartbeat_topic,
+            .payload= "online",
+            .len    = strlen("online"),
+            .qos    = 1,
+            .retain = 1
+    };
+
+    while (1) 
+    {
         system_metrics_t metrics = get_system_metrics();
         log_system_metrics(&metrics);
+        xQueueSend(ctx->mqttPublishQueue, &heartbeat, portMAX_DELAY);
         vTaskDelay(pdMS_TO_TICKS(10000));
     }
 }
