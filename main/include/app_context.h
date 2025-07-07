@@ -14,32 +14,43 @@
 #include "sht31.h"
 #include "mqtt.h"
 
+
+/* Raw MAC is 6 bytes */
+#define MAC_RAW_LEN       6
+/* 6 bytes × 2 hex digits + NUL */
+#define MAC_STR_LEN       (2 * MAC_RAW_LEN + 1)
+/* "meteopod/" is 9 chars, plus MAC_STR_LEN */
+#define TOPIC_PREFIX_LEN  (9 + MAC_STR_LEN)
+
 typedef struct {
     /* Buses & peripherals */
-    i2c_master_bus_handle_t   i2c_bus;
-    DFRobot_rainfall_sensor_t rain_sensor;
+    i2c_master_bus_handle_t     i2c_bus;
+    DFRobot_rainfall_sensor_t   rain_sensor;
 
     /* Queues & mutexes */
-    QueueHandle_t             sensorDataQueue;
-    QueueHandle_t             commandQueue;
-    SemaphoreHandle_t         sensorDataMutex;
+    QueueHandle_t               sensorDataQueue;
+    QueueHandle_t               commandQueue;
+    SemaphoreHandle_t           sensorDataMutex;
 
     /* Tasks */
-    TaskHandle_t              sensorTaskHandle;
-    TaskHandle_t              loggingTaskHandle;
-    TaskHandle_t              commandTaskHandle;
-    TaskHandle_t              watchdogTaskHandle;
-    TaskHandle_t              blinkTaskHandle;
-    TaskHandle_t              monitorTaskHandle;
+    TaskHandle_t                sensorTaskHandle;
+    TaskHandle_t                loggingTaskHandle;
+    TaskHandle_t                commandTaskHandle;
+    TaskHandle_t                watchdogTaskHandle;
+    TaskHandle_t                blinkTaskHandle;
+    TaskHandle_t                monitorTaskHandle;
 
     /* Timer */
-    esp_timer_handle_t        periodic_timer;
+    esp_timer_handle_t          periodic_timer;
 
     /* MQTT */
-    esp_mqtt_client_handle_t mqtt_client;
-    TaskHandle_t             mqttTaskHandle;
-    QueueHandle_t            mqttPublishQueue;
-    EventGroupHandle_t       mqttEventGroup; 
+    esp_mqtt_client_handle_t    mqtt_client;
+    TaskHandle_t                mqttTaskHandle;
+    QueueHandle_t               mqttPublishQueue;
+    EventGroupHandle_t          mqttEventGroup;
+    uint8_t                     device_mac[MAC_RAW_LEN];         
+    char                        device_mac_str[MAC_STR_LEN];     
+    char                        topic_prefix[TOPIC_PREFIX_LEN];
 } app_ctx_t;
 
 #endif  // APP_CONTEXT_H

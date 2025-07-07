@@ -103,13 +103,21 @@ void mqtt_task(void *pvParameters)
     );
 
     if (bits & MQTT_CONNECTED_BIT) {
+
+        /* Build “<prefix>/status”, e.g. “meteopod/ABCDEF012345/status” */
+        char startup_topic[TOPIC_PREFIX_LEN + 8];  // +8 for "/status" and NUL
+        snprintf(startup_topic,
+                sizeof(startup_topic),
+                "%s/status",
+                ctx->topic_prefix);
+
         int startup_id = esp_mqtt_client_publish(
             ctx->mqtt_client,
-            "meteopod/status",    /* topic */
-            "device boot",       /* payload */
-            0,                  /* use strlen internally */
-            1,                  /* QoS 1 */
-            1                   /* retained */
+            startup_topic,          /* meteopod/ABCDEF012345/status */
+            "device boot",          /* payload */
+            0,                      /* use strlen internally */
+            1,                      /* QoS 1 */
+            1                       /* retained */
         );
         ESP_LOGI(TAG, "Startup message on 'meteopod/status' published (msg_id=%d)", startup_id);
     } else {

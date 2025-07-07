@@ -25,10 +25,18 @@ void log_system_metrics(const system_metrics_t *metrics)
 
 void system_monitor_task(void *pvParameters)
 {
-    /* now consistent with other tasks: accept app_ctx_t* */
     app_ctx_t *ctx = pvParameters;
+
+    /* Build “<prefix>/availability” */
+    char heartbeat_topic[TOPIC_PREFIX_LEN + sizeof("/availability")];
+
+    snprintf(heartbeat_topic,
+            sizeof(heartbeat_topic),
+            "%s/availability",
+            ctx->topic_prefix);
+
     mqtt_publish_req_t heartbeat = {
-            .topic  = "meteopod/availability",
+            .topic  = heartbeat_topic,
             .payload= "online",
             .len    = strlen("online"),
             .qos    = 1,

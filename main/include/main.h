@@ -9,6 +9,7 @@
 #include "driver/gpio.h"
 #include "esp_log.h"
 #include "esp_system.h"
+#include "esp_mac.h"
 #include "esp_timer.h"
 #include "esp_task_wdt.h"
 #include "esp_err.h"
