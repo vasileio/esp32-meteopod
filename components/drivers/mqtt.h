@@ -9,6 +9,7 @@
 #include "freertos/event_groups.h"
 #include "freertos/queue.h"
 #include "app_context.h"
+#include "utils.h"
 
 #define MQTT_CONNECTED_BIT BIT0
 

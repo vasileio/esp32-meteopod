@@ -102,14 +102,24 @@ void mqtt_task(void *pvParameters)
         pdMS_TO_TICKS(5000)   /* 5 s timeout */
     );
 
-    if (bits & MQTT_CONNECTED_BIT) {
-
-        /* Build “<prefix>/status”, e.g. “meteopod/ABCDEF012345/status” */
+    if (bits & MQTT_CONNECTED_BIT) 
+    {
         char startup_topic[TOPIC_PREFIX_LEN + 8];  // +8 for "/status" and NUL
-        snprintf(startup_topic,
-                sizeof(startup_topic),
-                "%s/status",
-                ctx->topic_prefix);
+
+        /* Build the heartbeat topic "<prefix>/availability" */
+        esp_err_t err = utils_build_topic(
+            ctx->topic_prefix,
+            "status",
+            startup_topic,
+            sizeof(startup_topic)
+        );
+
+        if (ESP_OK != err) 
+        {
+            ESP_LOGE(TAG, "Failed to build heartbeat topic (err=%d)", err);
+            vTaskDelete(NULL);
+            return;
+        }
 
         int startup_id = esp_mqtt_client_publish(
             ctx->mqtt_client,

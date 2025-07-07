@@ -8,6 +8,7 @@
 #include "freertos/task.h"
 
 #include "app_context.h"
+#include "utils.h"
 
 // A simple POD to hold all of your stats
 typedef struct {

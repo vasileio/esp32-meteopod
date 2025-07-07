@@ -26,14 +26,22 @@ void log_system_metrics(const system_metrics_t *metrics)
 void system_monitor_task(void *pvParameters)
 {
     app_ctx_t *ctx = pvParameters;
-
-    /* Build “<prefix>/availability” */
     char heartbeat_topic[TOPIC_PREFIX_LEN + sizeof("/availability")];
 
-    snprintf(heartbeat_topic,
-            sizeof(heartbeat_topic),
-            "%s/availability",
-            ctx->topic_prefix);
+    /* Build the heartbeat topic "<prefix>/availability" */
+    esp_err_t err = utils_build_topic(
+        ctx->topic_prefix,
+        "availability",
+        heartbeat_topic,
+        sizeof(heartbeat_topic)
+    );
+
+    if (ESP_OK != err) 
+    {
+        ESP_LOGE(TAG, "Failed to build heartbeat topic (err=%d)", err);
+        vTaskDelete(NULL);
+        return;
+    }
 
     mqtt_publish_req_t heartbeat = {
             .topic  = heartbeat_topic,
