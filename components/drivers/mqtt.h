@@ -10,6 +10,12 @@
 #include "freertos/queue.h"
 #include "app_context.h"
 #include "utils.h"
+#include "ota_update.h"
+#include <string.h>
+
+#ifndef MIN
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
 
 #define MQTT_CONNECTED_BIT BIT0
 

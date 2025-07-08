@@ -1,0 +1,10 @@
+menu "OTA Update Configuration"
+
+config OTA_FIRMWARE_URL
+    string "Firmware update URL"
+    default "http://<host>:<port>/esp32-firmware/firmware.bin"
+    help
+      Full URL to the OTA firmware binary.
+      Replace <host> and <port> with your MinIO or HTTP server values.
+
+endmenu

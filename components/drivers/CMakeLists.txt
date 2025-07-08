@@ -12,4 +12,5 @@ idf_component_register(
     sensors
     mqtt
     utils
+    ota
 )

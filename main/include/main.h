@@ -13,6 +13,7 @@
 #include "esp_timer.h"
 #include "esp_task_wdt.h"
 #include "esp_err.h"
+#include "esp_app_desc.h"
 
 #include "app_context.h"
 #include "i2c.h"
