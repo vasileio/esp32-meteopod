@@ -63,9 +63,24 @@ void app_main(void)
              "meteopod/%s",
              ctx.device_mac_str);
 
+    snprintf(ctx.ota_cmd_topic,
+            sizeof(ctx.ota_cmd_topic),
+            "%s/ota/update",
+            ctx.topic_prefix);
+
+    // Build OTA status topic: meteopod/<mac>/ota/status
+    snprintf(ctx.ota_status_topic,
+            sizeof(ctx.ota_status_topic),
+            "%s/ota/status",
+            ctx.topic_prefix);
+
     /* 4) Print them out */
     ESP_LOGI(TAG, "Device MAC: %s",        ctx.device_mac_str);
     ESP_LOGI(TAG, "MQTT topic prefix: %s", ctx.topic_prefix);
+
+    const esp_app_desc_t *desc = esp_app_get_description();
+    ESP_LOGI(TAG, "Firmware version: %s", desc->version);
+
     /* Queues & mutex */
     ctx.commandQueue    = xQueueCreate(10, sizeof(uart_event_t));
     ctx.sensorDataMutex = xSemaphoreCreateMutex();

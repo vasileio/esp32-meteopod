@@ -51,6 +51,8 @@ typedef struct {
     uint8_t                     device_mac[MAC_RAW_LEN];         
     char                        device_mac_str[MAC_STR_LEN];     
     char                        topic_prefix[TOPIC_PREFIX_LEN];
+    char                        ota_cmd_topic[64];
+    char                        ota_status_topic[64];
 } app_ctx_t;
 
 #endif  // APP_CONTEXT_H
