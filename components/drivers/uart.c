@@ -1,6 +1,5 @@
 #include "uart.h"
 
-
 void init_uart(app_ctx_t *ctx)
 {
     uart_config_t cfg = {

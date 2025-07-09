@@ -15,7 +15,6 @@
 #include "esp_err.h"
 #include "esp_app_desc.h"
 
-#include "app_context.h"
 #include "task_config.h"
 #include "i2c.h"
 #include "wifi.h"

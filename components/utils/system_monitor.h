@@ -6,16 +6,18 @@
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-
-#include "app_context.h"
 #include "utils.h"
 
-// A simple POD to hold all of your stats
+/**
+ * @brief Health‐check data structure.
+ *
+ * Contains basic device health metrics for monitoring.
+ */
 typedef struct {
-    size_t free_heap;
-    size_t min_free_heap;
-    int64_t uptime_ms;
-    UBaseType_t stack_watermark;
+    uint32_t uptime_ms;           /**< Milliseconds since device boot. */
+    uint32_t min_free_heap;       /**< The minimum free heap observed. */
+    uint32_t free_heap;         /**< Bytes of free heap memory. */
+    uint32_t stack_watermark;  /**< Minimum free stack space (high watermark). */
 } system_metrics_t;
 
 // Gathers one snapshot

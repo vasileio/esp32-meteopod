@@ -117,14 +117,15 @@ void sensors_task(void *pvParameters)
                 ctx->sensor_readings.bme280_readings.humidity   = bme280_data.humidity;
                 ctx->sensor_readings.bme280_readings.pressure   = bme280_data.pressure;
                 xSemaphoreGive(ctx->sensorDataMutex);
+
+                /* Log from the local buffer (no need to hold the lock while logging) */
+                ESP_LOGI(TAG, "Temperature: %.2f °C", bme280_data.temperature);
+                ESP_LOGI(TAG, "Humidity:    %.2f %%RH", bme280_data.humidity);
+                ESP_LOGI(TAG, "Pressure:    %.2f hPa", bme280_data.pressure);
             } else {
                 ESP_LOGW(TAG, "Failed to take sensorDataMutex");
             }
 
-            /* Log from the local buffer (no need to hold the lock while logging) */
-            ESP_LOGI(TAG, "Temperature: %.2f °C", bme280_data.temperature);
-            ESP_LOGI(TAG, "Humidity:    %.2f %%RH", bme280_data.humidity);
-            ESP_LOGI(TAG, "Pressure:    %.2f hPa", bme280_data.pressure);
         }
 
         /* TODO: Read additional sensors here */

@@ -1,4 +1,5 @@
 #include "mqtt.h"
+#include "app_context.h"
 
 #define TAG "MQTT"
 

@@ -1,4 +1,5 @@
 #include "system_monitor.h"
+#include "app_context.h"
 
 static const char *TAG = "SYSTEM_MONITOR";
 
@@ -16,10 +17,10 @@ system_metrics_t get_system_metrics(void)
 
 void log_system_metrics(const system_metrics_t *metrics)
 {
-    ESP_LOGI(TAG, "Free Heap: %d bytes, Min Free Heap: %d bytes",
+    ESP_LOGI(TAG, "Free Heap: %lu bytes, Min Free Heap: %lu bytes",
              metrics->free_heap, metrics->min_free_heap);
-    ESP_LOGI(TAG, "Uptime: %lld ms", metrics->uptime_ms);
-    ESP_LOGI(TAG, "Task Stack High Water Mark: %u bytes",
+    ESP_LOGI(TAG, "Uptime: %lu ms", metrics->uptime_ms);
+    ESP_LOGI(TAG, "Task Stack High Water Mark: %lu bytes",
              metrics->stack_watermark);
 }
 
