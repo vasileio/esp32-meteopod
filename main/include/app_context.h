@@ -29,32 +29,35 @@ typedef struct {
     i2c_master_bus_handle_t     i2c_bus;
     DFRobot_rainfall_sensor_t   rain_sensor;
 
-    /* Queues & mutexes */
+    /* Queues */
     QueueHandle_t               sensorDataQueue;
     QueueHandle_t               commandQueue;
+    QueueHandle_t               mqttPublishQueue;
+
+    /* Mutexes */
     SemaphoreHandle_t           sensorDataMutex;
 
     /* Tasks */
     TaskHandle_t                sensorTaskHandle;
-    TaskHandle_t                loggingTaskHandle;
-    TaskHandle_t                commandTaskHandle;
     TaskHandle_t                watchdogTaskHandle;
     TaskHandle_t                blinkTaskHandle;
     TaskHandle_t                monitorTaskHandle;
+    TaskHandle_t                mqttTaskHandle;
 
     /* Timer */
     esp_timer_handle_t          periodic_timer;
 
-    /* MQTT */
+    /* MQTT client */
     esp_mqtt_client_handle_t    mqtt_client;
-    TaskHandle_t                mqttTaskHandle;
-    QueueHandle_t               mqttPublishQueue;
     EventGroupHandle_t          mqttEventGroup;
-    uint8_t                     device_mac[MAC_RAW_LEN];         
-    char                        device_mac_str[MAC_STR_LEN];     
+
+    /* Identifiers & topics */
+    uint8_t                     device_mac[MAC_RAW_LEN];
+    char                        device_mac_str[MAC_STR_LEN];
     char                        topic_prefix[TOPIC_PREFIX_LEN];
     char                        ota_cmd_topic[64];
     char                        ota_status_topic[64];
 } app_ctx_t;
+
 
 #endif  // APP_CONTEXT_H
