@@ -12,6 +12,8 @@
 
 #include "dfrobot_rainfall_sensor.h"
 #include "sht31.h"
+#include "bme280.h"
+
 #include "mqtt.h"
 
 

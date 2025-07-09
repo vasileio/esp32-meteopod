@@ -40,7 +40,7 @@ enum {
 #define STACK_WATCHDOG_WORDS  (configMINIMAL_STACK_SIZE + 640)   // = 768 bytes
 #define STACK_BLINK_WORDS     (configMINIMAL_STACK_SIZE + 384)   // = 512 bytes  
 #define STACK_MONITOR_WORDS   (configMINIMAL_STACK_SIZE + 1024)  // = 1152 bytes
-#define STACK_MQTT_WORDS      (configMINIMAL_STACK_SIZE + 3968)  // = 4096 bytes (keep as-is)
+#define STACK_MQTT_WORDS      (configMINIMAL_STACK_SIZE + 3968)  // = 4096 bytes
 #define STACK_SENSORS_WORDS   (configMINIMAL_STACK_SIZE + 1408)  // = 1536 bytes
 
 #endif /* TASK_CONFIG_H */

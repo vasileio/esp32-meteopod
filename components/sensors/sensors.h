@@ -15,7 +15,9 @@
 #include "esp_log.h"
 #include "esp_err.h"
 #include "sht31.h"
+#include "bme280.h"
 #include "app_context.h"
+#include "i2c.h"
 
 
 #ifdef __cplusplus
