@@ -7,28 +7,32 @@
  * to periodically read sensor values and output them via ESP_LOG.
  * Future sensors can be added by extending sensors_init and sensors_task.
  */
-#ifndef COMPONENTS_SENSORS_SENSORS_H_
-#define COMPONENTS_SENSORS_SENSORS_H_
-
+#pragma once
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "esp_err.h"
 #include "sht31.h"
 #include "bme280.h"
-#include "app_context.h"
 #include "i2c.h"
 
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
+#define BME280_READY_TIMEOUT_MS   1000
+#define BME280_POLL_INTERVAL_MS     10
 
 /**
  * @brief Delay between sensor readings in milliseconds.
  */
 #define SENSOR_READ_INTERVAL_MS 5000
+
+/**
+ * @brief Sensors readings structure
+ *
+ * Contains all readings acquired by the various sensors.
+ */
+typedef struct 
+{
+    bme280_data_t   bme280_readings;
+} sensor_readings_t;
 
 /**
  * @brief Initialize all configured sensors.
@@ -47,9 +51,3 @@ void sensors_init(void *pvParameters);
  * @param pvParameters Task parameters (unused, set to NULL).
  */
 void sensors_task(void *pvParameters);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* COMPONENTS_SENSORS_SENSORS_H_ */

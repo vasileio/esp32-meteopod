@@ -1,6 +1,6 @@
 #include "mqtt.h"
 
-#define TAG "mqtt_task"
+#define TAG "MQTT"
 
 /**
  * @brief MQTT event handler

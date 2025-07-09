@@ -1,19 +1,23 @@
 #ifndef APP_CONTEXT_H
 #define APP_CONTEXT_H
 
+/* ESP headers */
 #include "esp_timer.h"
-
 #include "driver/i2c_master.h"
 
+/* FreeRTOS headers */
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
 
+/* Sensor headers */
+#include "sensors.h"
 #include "dfrobot_rainfall_sensor.h"
 #include "sht31.h"
 #include "bme280.h"
 
+/* MQTT */
 #include "mqtt.h"
 
 
@@ -44,8 +48,8 @@ typedef struct {
     TaskHandle_t                monitorTaskHandle;
     TaskHandle_t                mqttTaskHandle;
 
-    /* Timer */
-    esp_timer_handle_t          periodic_timer;
+    /* Readings */
+    sensor_readings_t           sensor_readings;
 
     /* MQTT client */
     esp_mqtt_client_handle_t    mqtt_client;
