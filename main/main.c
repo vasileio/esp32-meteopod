@@ -43,40 +43,8 @@ void app_main(void)
         ESP_LOGE(TAG, "I2C init failed: %s", esp_err_to_name(err));
         return;
     }
-    /* 1) Read raw MAC */
-    esp_read_mac(ctx.device_mac, ESP_MAC_WIFI_STA);
 
-    /* 2) Build MAC string (uppercase, no separators) */
-    snprintf(ctx.device_mac_str,
-             MAC_STR_LEN,
-             "%02X%02X%02X%02X%02X%02X",
-             ctx.device_mac[0],
-             ctx.device_mac[1],
-             ctx.device_mac[2],
-             ctx.device_mac[3],
-             ctx.device_mac[4],
-             ctx.device_mac[5]);
-
-    /* 3) Build topic prefix "meteopod/<MAC>" */
-    snprintf(ctx.topic_prefix,
-             TOPIC_PREFIX_LEN,
-             "meteopod/%s",
-             ctx.device_mac_str);
-
-    snprintf(ctx.ota_cmd_topic,
-            sizeof(ctx.ota_cmd_topic),
-            "%s/ota/update",
-            ctx.topic_prefix);
-
-    // Build OTA status topic: meteopod/<mac>/ota/status
-    snprintf(ctx.ota_status_topic,
-            sizeof(ctx.ota_status_topic),
-            "%s/ota/status",
-            ctx.topic_prefix);
-
-    /* 4) Print them out */
-    ESP_LOGI(TAG, "Device MAC: %s",        ctx.device_mac_str);
-    ESP_LOGI(TAG, "MQTT topic prefix: %s", ctx.topic_prefix);
+    mqtt_build_all_topics(&ctx);
 
     const esp_app_desc_t *desc = esp_app_get_description();
     ESP_LOGI(TAG, "Firmware version: %s", desc->version);

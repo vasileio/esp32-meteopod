@@ -1,5 +1,7 @@
 #include "system_monitor.h"
 #include "app_context.h"
+#include "mqtt.h"
+
 
 static const char *TAG = "SYSTEM_MONITOR";
 

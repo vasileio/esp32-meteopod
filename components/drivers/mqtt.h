@@ -1,5 +1,4 @@
-#ifndef COMPONENTS_DRIVERS_MQTT_INCLUDE_MQTT_H_
-#define COMPONENTS_DRIVERS_MQTT_INCLUDE_MQTT_H_
+#pragma once
 
 #include <inttypes.h>
 #include "esp_log.h"
@@ -13,6 +12,7 @@
 #include "sensors.h"
 #include "system_monitor.h"
 #include <string.h>
+#include "app_context.h"
 
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -68,6 +68,29 @@ typedef struct
 } mqtt_publish_req_t;
 
 /**
+ * @brief Build all MQTT topics based on the device’s topic prefix.
+ *
+ * Uses @c utils_build_topic() to concatenate the base prefix (already in
+ * @c ctx->topic_prefix) with the appropriate suffixes, filling in:
+ *   - ctx->sensor_topic
+ *   - ctx->sensor_bme280_topic
+ *   - ctx->sensor_sht31_topic
+ *   - ctx->sensor_rainfall_topic
+ *   - ctx->health_topic
+ *   - ctx->ota_topic
+ *   - ctx->ota_cmd_topic
+ *   - ctx->ota_status_topic
+ *
+ * @param[in,out] ctx  Pointer to the application context; must have
+ *                     ctx->topic_prefix already initialized.
+ * @return
+ *   - ESP_OK if all topics were built successfully.
+ *   - ESP_ERR_INVALID_ARG if any pointer is NULL or buffer lengths are zero.
+ *   - ESP_ERR_INVALID_SIZE if any topic didn’t fit into its buffer.
+ */
+esp_err_t mqtt_build_all_topics(app_ctx_t *ctx);
+
+/**
  * @brief MQTT processing task
  *
  * Initializes MQTT client, registers event handler, and continuously
@@ -77,5 +100,3 @@ typedef struct
  * @param pvParameters Pointer to application context (app_ctx_t *)
  */
 void mqtt_task(void *pvParameters);
-
-#endif /* COMPONENTS_DRIVERS_MQTT_INCLUDE_MQTT_H_ */

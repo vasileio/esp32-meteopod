@@ -18,7 +18,9 @@
 #include "bme280.h"
 
 /* MQTT */
-#include "mqtt.h"
+// #include "mqtt.h"
+typedef struct esp_mqtt_client* esp_mqtt_client_handle_t;  /**< Forward‐declare the MQTT client handle */
+
 
 
 /* Raw MAC is 6 bytes */
@@ -27,6 +29,8 @@
 #define MAC_STR_LEN       (2 * MAC_RAW_LEN + 1)
 /* "meteopod/" is 9 chars, plus MAC_STR_LEN */
 #define TOPIC_PREFIX_LEN  (9 + MAC_STR_LEN)
+
+#define TOPIC_LEN 64
 
 typedef struct {
     /* Buses & peripherals */
@@ -59,8 +63,16 @@ typedef struct {
     uint8_t                     device_mac[MAC_RAW_LEN];
     char                        device_mac_str[MAC_STR_LEN];
     char                        topic_prefix[TOPIC_PREFIX_LEN];
-    char                        ota_cmd_topic[64];
-    char                        ota_status_topic[64];
+    char                        sensor_topic[TOPIC_LEN];
+    char                        health_topic[TOPIC_LEN];
+    char                        ota_topic[TOPIC_LEN];
+    char                        ota_cmd_topic[TOPIC_LEN];
+    char                        ota_status_topic[TOPIC_LEN];
+
+    /* Per‐sensor subtopics under <prefix>/sensor */
+    char                        sensor_bme280_topic[TOPIC_LEN];
+    char                        sensor_sht31_topic[TOPIC_LEN];
+    char                        sensor_rainfall_topic[TOPIC_LEN];
 } app_ctx_t;
 
 

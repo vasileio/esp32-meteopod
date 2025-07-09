@@ -1,7 +1,102 @@
 #include "mqtt.h"
-#include "app_context.h"
+
 
 #define TAG "MQTT"
+
+/**
+ * 
+ * @brief Build all MQTT topics based on the device’s topic prefix.
+ *
+ */
+esp_err_t mqtt_build_all_topics(app_ctx_t *ctx)
+{
+    esp_err_t err;
+
+    if (!ctx) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    /* Base sensor topic: "<prefix>/sensor" */
+    err = utils_build_topic(ctx->topic_prefix,
+                            "sensor",
+                            ctx->sensor_topic,
+                            sizeof(ctx->sensor_topic));
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to build sensor topic: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    /* Per-sensor subtopics under "<prefix>/sensor" */
+    err = utils_build_topic(ctx->sensor_topic,
+                            "bme280",
+                            ctx->sensor_bme280_topic,
+                            sizeof(ctx->sensor_bme280_topic));
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to build BME280 topic: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    err = utils_build_topic(ctx->sensor_topic,
+                            "sht31",
+                            ctx->sensor_sht31_topic,
+                            sizeof(ctx->sensor_sht31_topic));
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to build SHT31 topic: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    err = utils_build_topic(ctx->sensor_topic,
+                            "rainfall",
+                            ctx->sensor_rainfall_topic,
+                            sizeof(ctx->sensor_rainfall_topic));
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to build rainfall topic: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    /* Health topic: "<prefix>/health" */
+    err = utils_build_topic(ctx->topic_prefix,
+                            "health",
+                            ctx->health_topic,
+                            sizeof(ctx->health_topic));
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to build health topic: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    /* OTA base topic: "<prefix>/ota" */
+    err = utils_build_topic(ctx->topic_prefix,
+                            "ota",
+                            ctx->ota_topic,
+                            sizeof(ctx->ota_topic));
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to build OTA base topic: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    /* OTA command topic: "<prefix>/ota/cmd" */
+    err = utils_build_topic(ctx->ota_topic,
+                            "cmd",
+                            ctx->ota_cmd_topic,
+                            sizeof(ctx->ota_cmd_topic));
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to build OTA command topic: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    /* OTA status topic: "<prefix>/ota/status" */
+    err = utils_build_topic(ctx->ota_topic,
+                            "status",
+                            ctx->ota_status_topic,
+                            sizeof(ctx->ota_status_topic));
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to build OTA status topic: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    return ESP_OK;
+}
+
 
 /**
  * @brief MQTT event handler
