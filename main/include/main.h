@@ -16,9 +16,11 @@
 #include "esp_app_desc.h"
 
 #include "app_context.h"
+#include "task_config.h"
 #include "i2c.h"
 #include "wifi.h"
 #include "uart.h"
 #include "system_monitor.h"
 #include "sht31.h"
 #include "dfrobot_rainfall_sensor.h"
+#include "sensors.h"

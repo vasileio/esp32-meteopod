@@ -30,7 +30,7 @@ static void blink_task(void *pvParameters)
 
 void app_main(void)
 {
-    static app_ctx_t ctx;  // all shared state
+    static app_ctx_t ctx;
 
     ESP_LOGI(TAG, "System booting…");
 
@@ -85,9 +85,11 @@ void app_main(void)
     ctx.commandQueue    = xQueueCreate(10, sizeof(uart_event_t));
     ctx.sensorDataMutex = xSemaphoreCreateMutex();
 
-    /* Spawn tasks */
-    xTaskCreate(watchdog_task,        "watchdog",  2048, &ctx, 6, &ctx.watchdogTaskHandle);
-    xTaskCreate(blink_task,           "blink",     3072, &ctx, 1, &ctx.blinkTaskHandle);
-    xTaskCreate(system_monitor_task,  "monitor",   4096, &ctx, 1, &ctx.monitorTaskHandle);
-    xTaskCreate(mqtt_task,            "mqtt_task", 4096, &ctx, 5, &ctx.mqttTaskHandle);
+    /* Create tasks */
+    xTaskCreate(watchdog_task,        "watchdog",     STACK_WATCHDOG_WORDS, &ctx, PRIO_WATCHDOG, &ctx.watchdogTaskHandle);
+    xTaskCreate(blink_task,           "blink",        STACK_BLINK_WORDS,    &ctx, PRIO_BLINK,    &ctx.blinkTaskHandle);
+    xTaskCreate(system_monitor_task,  "monitor",      STACK_MONITOR_WORDS,  &ctx, PRIO_MONITOR,  &ctx.monitorTaskHandle);
+    xTaskCreate(mqtt_task,            "mqtt_task",    STACK_MQTT_WORDS,     &ctx, PRIO_MQTT,     &ctx.mqttTaskHandle);
+    xTaskCreate(sensors_task,         "sensors_task", STACK_SENSORS_WORDS,  &ctx, PRIO_SENSORS,  &ctx.sensorTaskHandle);
+
 }
