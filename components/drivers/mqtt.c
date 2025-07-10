@@ -3,6 +3,19 @@
 #define TAG "MQTT"
 
 /**
+ * @brief  Clear a payload buffer.
+ * 
+ * @param buf       Pointer to the buffer to wipe.
+ * @param buf_size  Size of the buffer in bytes.
+ */
+static inline void wipe_payload(char *buf, size_t buf_size)
+{
+    if (buf && buf_size > 0) {
+        memset(buf, 0, buf_size);
+    }
+}
+
+/**
  * @brief Build all MQTT topics based on the device’s topic prefix.
  */
 esp_err_t mqtt_build_all_topics(app_ctx_t *ctx)
@@ -277,7 +290,26 @@ void mqtt_task(void *pvParameters)
                     1,      /* QoS 1 */
                     0       /* not retained */
                 );
-                ESP_LOGI(TAG, "Published sensor readings: %s (msg_id=%d)", payload, msg_id);
+                ESP_LOGI(TAG, "Published BME280 sensor readings: %s (msg_id=%d)", payload, msg_id);
+
+                /* SHT31 */
+                wipe_payload(payload, sizeof(payload));
+                snprintf(payload, sizeof(payload),
+                    "{\"temperature\":%.2f,"
+                    "\"humidity\":%.2f,"
+                    "}",
+                    m->sht31_readings.temperature,
+                    m->sht31_readings.humidity);
+
+                msg_id = esp_mqtt_client_publish(
+                    ctx->mqtt_client,
+                    ctx->sensor_sht31_topic,
+                    payload,
+                    0,
+                    1,      /* QoS 1 */
+                    0       /* not retained */
+                );
+                ESP_LOGI(TAG, "Published SHT31 sensor readings: %s (msg_id=%d)", payload, msg_id);
             } break;
             // add more message types here if you need them
 

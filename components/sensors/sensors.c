@@ -122,11 +122,11 @@ void sensors_init(void *pvParameters)
 
 void sensors_task(void *pvParameters)
 {
-    app_ctx_t *ctx = (app_ctx_t *)pvParameters;
-    bme280_data_t bme280_data;
-    float sht31_temperature, sht31_humidity;
-    mqtt_queue_item_t   item;
-    esp_err_t err;
+    app_ctx_t *ctx =        (app_ctx_t *)pvParameters;
+    bme280_data_t           bme280_data;
+    sht31_data_t            sht31_data;
+    mqtt_queue_item_t       item;
+    esp_err_t               err;
 
     item.type = MSG_SENSOR;
 
@@ -151,11 +151,6 @@ void sensors_task(void *pvParameters)
                 /* Copy into our queue item */
                 item.data.sensor.bme280_readings = bme280_data;
 
-                /* Enqueue for the MQTT task to format & publish */
-                if (xQueueSend(ctx->mqttPublishQueue, &item, portMAX_DELAY) != pdTRUE) {
-                    ESP_LOGW(TAG, "MQTT metrics queue full, dropping heartbeat");
-                }
-
                 /* Log from the local buffer (no need to hold the lock while logging) */
                 ESP_LOGI(TAG, "[BME280] Temperature: %.2f °C", bme280_data.temperature);
                 ESP_LOGI(TAG, "[BME280] Humidity:    %.2f %%RH", bme280_data.humidity);
@@ -166,13 +161,29 @@ void sensors_task(void *pvParameters)
 
         }
 
-        err = sht31_read_temp_hum(&ctx->sh31_sensor, &sht31_temperature, &sht31_humidity);
+        err = sht31_read_temp_hum(&ctx->sh31_sensor, &sht31_data.temperature, &sht31_data.humidity);
         if (err != ESP_OK) {
             ESP_LOGW(TAG, "SHT31 read error (continuing): %s", esp_err_to_name(err));
         } else {
-                ESP_LOGI(TAG, "[SHT31] Temperature: %.2f °C", sht31_temperature);
-                ESP_LOGI(TAG, "[SHT31] Humidity:    %.2f %%RH", sht31_humidity);
+
+            /* Acquire mutex before updating shared context */
+            if (xSemaphoreTake(ctx->sensorDataMutex, portMAX_DELAY) == pdTRUE) {
+                ctx->sensor_readings.sht31_readings.temperature = sht31_data.temperature;
+                ctx->sensor_readings.sht31_readings.humidity   =    sht31_data.humidity;
+                xSemaphoreGive(ctx->sensorDataMutex);
+                
+                /* Copy into our queue item */
+                item.data.sensor.sht31_readings = sht31_data;
+
+                ESP_LOGI(TAG, "[SHT31] Temperature: %.2f °C", sht31_data.temperature);
+                ESP_LOGI(TAG, "[SHT31] Humidity:    %.2f %%RH", sht31_data.humidity);
         }
+    }
+
+    /* Enqueue for the MQTT task to format & publish */
+    if (xQueueSend(ctx->mqttPublishQueue, &item, portMAX_DELAY) != pdTRUE) {
+        ESP_LOGW(TAG, "MQTT metrics queue full, dropping heartbeat");
+    }
         /* TODO: Read additional sensors here */
 
         vTaskDelay(pdMS_TO_TICKS(SENSOR_READ_INTERVAL_MS));

@@ -32,6 +32,7 @@
 typedef struct 
 {
     bme280_data_t   bme280_readings;
+    sht31_data_t    sht31_readings;
 } sensor_readings_t;
 
 /**

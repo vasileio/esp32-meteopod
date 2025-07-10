@@ -24,6 +24,14 @@ typedef struct {
     i2c_master_dev_handle_t dev;          /**< I2C device handle */
 } sht31_handle_t;
 
+/**
+ * @brief Measurement results.
+ */
+typedef struct {
+    float   temperature; /**< °C */
+    float   humidity;    /**< %RH */
+} sht31_data_t;
+
 /** Default I2C address */
 #define SHT31_ADDR_DEFAULT                 0x44
 
@@ -35,7 +43,7 @@ typedef struct {
 #define SHT31_CMD_HEATEREN                 0x306D  /**< Enable heater */
 #define SHT31_CMD_HEATERDIS                0x3066  /**< Disable heater */
 
-/** Maximum retry attempts for measurement */
+/* Maximum retry attempts for measurement */
 #define SHT31_MAX_TRIES                    3
 
 /**
