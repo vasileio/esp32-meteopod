@@ -30,12 +30,15 @@ typedef struct {
 #define SHT31_ADDR_DEFAULT        0x44
 
 /** Commands */
-#define SHT31_CMD_MEAS_HIGHREP    0x2400
-#define SHT31_CMD_READSTATUS      0xF32D
-#define SHT31_CMD_SOFTRESET       0x30A2
-#define SHT31_CMD_HEATEREN        0x306D
-#define SHT31_CMD_HEATERDIS       0x3066
-#define SHT31_STATUS_HEATER_BIT   0x0008
+#define SHT31_CMD_MEAS_HIGHREP_STRETCH      0x2C06
+#define SHT31_CMD_MEAS_HIGHREP              0x2400
+#define SHT31_CMD_READSTATUS                0xF32D
+#define SHT31_CMD_SOFTRESET                 0x30A2
+#define SHT31_CMD_HEATEREN                  0x306D
+#define SHT31_CMD_HEATERDIS                 0x3066
+#define SHT31_STATUS_HEATER_BIT             0x0008
+
+#define SHT31_MAX_TRIES           3
 
 /**
  * @brief Initialize SHT31 on given I2C port and address.
