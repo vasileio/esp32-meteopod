@@ -1,4 +1,8 @@
 #include "mqtt.h"
+#include <cJSON.h>
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#endif
 
 #define TAG "MQTT"
 
@@ -12,6 +16,121 @@ static inline void wipe_payload(char *buf, size_t buf_size)
 {
     if (buf && buf_size > 0) {
         memset(buf, 0, buf_size);
+    }
+}
+
+/** @brief List of all Home Assistant-exposed sensors. */
+static const ha_sensor_config_t ha_sensors[] = {
+    { "bme280_temperature", "BME280 Temperature", "°C",  "{{ value_json.temperature }}", "temperature", NULL },
+    { "bme280_humidity",    "BME280 Humidity",    "%",   "{{ value_json.humidity }}",    "humidity",    NULL },
+    { "bme280_pressure",    "BME280 Pressure",    "hPa", "{{ value_json.pressure }}",    "pressure",    NULL },
+    { "sht31_temperature",  "SHT31 Temperature",  "°C",  "{{ value_json.temperature }}", "temperature", NULL },
+    { "sht31_humidity",     "SHT31 Humidity",     "%",   "{{ value_json.humidity }}",    "humidity",    NULL }
+};
+
+
+/**
+ * Example MQTT discovery config payload built by this function:
+ *
+ * Topic: homeassistant/meteopod/XXYYZZ/sensor/bme280_temperature/config
+ * Payload:
+ * {
+ *   "name": "BME280 Temperature",
+ *   "state_topic": "meteopod/XXYYZZ/sensor/bme280",
+ *   "unit_of_measurement": "°C",
+ *   "value_template": "{{ value_json.temperature }}",
+ *   "unique_id": "meteopod_bme280_temperature",
+ *   "device_class": "temperature",
+ *   "device": {
+ *     "identifiers": ["esp32-meteopod-XXYYZZ"],
+ *     "name": "ESP32 Meteopod",
+ *     "model": "ESP32 Meteopod 1.2.3",
+ *     "manufacturer": "vasileio"
+ *   }
+ * }
+ */
+
+static void publish_HA_discovery_config(esp_mqtt_client_handle_t client,
+                                        const char *mac_str,
+                                        const char *suffix,
+                                        const char *name,
+                                        const char *unit,
+                                        const char *value_template,
+                                        const char *device_class,
+                                        const char *sensor_topic,
+                                        const char *device_id,
+                                        const char *device_name)
+{
+    char topic[192];
+    char payload[512];
+
+    // e.g. homeassistant/meteopod/XXYYZZ/sensor/bme280_temperature/config
+    snprintf(topic, sizeof(topic),
+            "homeassistant/sensor/meteopod_%s/%s/config", mac_str, suffix);
+
+    cJSON *root = cJSON_CreateObject();
+
+    cJSON_AddStringToObject(root, "name", name);
+    cJSON_AddStringToObject(root, "state_topic", sensor_topic);
+    cJSON_AddStringToObject(root, "unit_of_measurement", unit);
+    cJSON_AddStringToObject(root, "value_template", value_template);
+    cJSON_AddStringToObject(root, "unique_id", suffix);
+    if (device_class) {
+        cJSON_AddStringToObject(root, "device_class", device_class);
+    }
+
+    cJSON *device = cJSON_CreateObject();
+    cJSON_AddStringToObject(device, "identifiers", device_id);
+    cJSON_AddStringToObject(device, "name", CONFIG_MQTT_DEVICE_NAME);
+    cJSON_AddStringToObject(device, "model", "Meteopod " CONFIG_APP_PROJECT_VER);
+    cJSON_AddStringToObject(device, "manufacturer", "vasileio");
+    cJSON_AddItemToObject(root, "device", device);
+
+    snprintf(payload, sizeof(payload), "%s", cJSON_PrintUnformatted(root));
+    cJSON_Delete(root);
+
+    esp_mqtt_client_publish(client, topic, payload, 0, 1, true);  // retain = true
+}
+
+/**
+ * @brief Publish MQTT discovery configuration for all known sensors to Home Assistant.
+ *
+ * This function constructs discovery topics and JSON payloads for all defined sensors,
+ * assigning the correct sensor topic based on the suffix, and publishes them with retain=true.
+ *
+ * @param[in] client     Handle to the initialized MQTT client
+ * @param[in] ctx        Application context with MQTT topic strings and MAC address
+ */
+static void publish_all_discovery_configs(esp_mqtt_client_handle_t client, app_ctx_t *ctx)
+{
+    const char *mac = ctx->device_mac_str;
+    char device_id[64];
+    snprintf(device_id, sizeof(device_id), "esp32-meteopod-%s", mac);
+
+    ha_sensor_config_t sensors[ARRAY_SIZE(ha_sensors)];
+    memcpy(sensors, ha_sensors, sizeof(ha_sensors));
+
+    for (size_t i = 0; i < ARRAY_SIZE(sensors); ++i) {
+        // Assign correct sensor topic based on suffix
+        if (strstr(sensors[i].suffix, "bme280")) {
+            sensors[i].sensor_topic = ctx->sensor_bme280_topic;
+        } else if (strstr(sensors[i].suffix, "sht31")) {
+            sensors[i].sensor_topic = ctx->sensor_sht31_topic;
+        } else {
+            ESP_LOGW(TAG, "Skipping unknown sensor suffix: %s", sensors[i].suffix);
+            continue;
+        }
+
+        publish_HA_discovery_config(client,
+                                    mac,
+                                    sensors[i].suffix,
+                                    sensors[i].name,
+                                    sensors[i].unit,
+                                    sensors[i].value_template,
+                                    sensors[i].device_class,
+                                    sensors[i].sensor_topic,
+                                    device_id,
+                                    "ESP32 Meteopod");
     }
 }
 
@@ -126,6 +245,8 @@ static void mqtt_event_handler(void *arg,
     switch (event_id) {
         case MQTT_EVENT_CONNECTED:
             ESP_LOGI(TAG, "MQTT connected");
+
+            /* Subscriptions */
             xEventGroupSetBits(ctx->mqttEventGroup, MQTT_CONNECTED_BIT);
             if (evt->client) {
                 ESP_LOGI(TAG, "susbscribing to topic");
@@ -135,7 +256,10 @@ static void mqtt_event_handler(void *arg,
                 ESP_LOGI(TAG, "Subscribed to OTA cmd: %s (mid=%d)",
                          ctx->ota_cmd_topic, mid);
             }
-            ESP_LOGI(TAG, "Cleared retained metrics");
+
+            /* Publish Home Assistant discovery configs */
+            publish_all_discovery_configs(evt->client, ctx);
+
             break;
 
         case MQTT_EVENT_DISCONNECTED:
@@ -296,7 +420,7 @@ void mqtt_task(void *pvParameters)
                 wipe_payload(payload, sizeof(payload));
                 snprintf(payload, sizeof(payload),
                     "{\"temperature\":%.2f,"
-                    "\"humidity\":%.2f,"
+                    "\"humidity\":%.2f"
                     "}",
                     m->sht31_readings.temperature,
                     m->sht31_readings.humidity);

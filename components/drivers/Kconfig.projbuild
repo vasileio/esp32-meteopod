@@ -14,4 +14,11 @@ config MQTT_BROKER_URI
     help
       URI of the MQTT broker, e.g. mqtt://host:port
 
+config MQTT_DEVICE_NAME
+    string "Friendly device name"
+    default "ESP32 Meteopod"
+    help
+      This name will appear in Home Assistant as the model name of your device.
+      It is used in MQTT discovery under the "device.model" field.
+
 endmenu
