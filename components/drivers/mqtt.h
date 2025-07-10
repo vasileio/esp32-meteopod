@@ -22,6 +22,20 @@
 #define MQTT_CONNECTED_BIT BIT0
 
 /**
+ * @brief Home Assistant MQTT discovery sensor configuration.
+ *
+ * Defines metadata needed to publish a single sensor’s MQTT discovery configuration.
+ */
+typedef struct {
+    const char *suffix;           /**< Unique sensor suffix used in the discovery topic and unique_id */
+    const char *name;             /**< Friendly name of the sensor in Home Assistant */
+    const char *unit;             /**< Unit of measurement (e.g., °C, %, hPa) */
+    const char *value_template;   /**< Home Assistant Jinja template to extract value from JSON payload */
+    const char *device_class;     /**< Device class (temperature, humidity, etc.) */
+    const char *sensor_topic;     /**< Fully qualified MQTT topic for publishing sensor data */
+} ha_sensor_config_t;
+
+/**
  * @brief Types of messages that can be sent over the MQTT publish queue.
  *
  * This enum is used in mqtt_queue_item_t to indicate which
