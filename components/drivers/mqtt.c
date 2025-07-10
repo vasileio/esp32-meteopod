@@ -1,8 +1,12 @@
 #include "mqtt.h"
 #include <cJSON.h>
+
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #endif
+
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
 
 #define TAG "MQTT"
 
@@ -81,8 +85,13 @@ static void publish_HA_discovery_config(esp_mqtt_client_handle_t client,
 
     cJSON *device = cJSON_CreateObject();
     cJSON_AddStringToObject(device, "identifiers", device_id);
-    cJSON_AddStringToObject(device, "name", CONFIG_MQTT_DEVICE_NAME);
-    cJSON_AddStringToObject(device, "model", "Meteopod " CONFIG_APP_PROJECT_VER);
+
+    cJSON_AddStringToObject(device, "name", STR(CONFIG_MQTT_DEVICE_NAME));
+
+    char model_str[64];
+    snprintf(model_str, sizeof(model_str), "Meteopod %s", STR(CONFIG_APP_PROJECT_VER));
+    cJSON_AddStringToObject(device, "model", model_str);
+
     cJSON_AddStringToObject(device, "manufacturer", "vasileio");
     cJSON_AddItemToObject(root, "device", device);
 
