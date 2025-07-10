@@ -25,11 +25,14 @@ static inline void wipe_payload(char *buf, size_t buf_size)
 
 /** @brief List of all Home Assistant-exposed sensors. */
 static const ha_sensor_config_t ha_sensors[] = {
-    { "bme280_temperature",     "Case Temperature",         "°C",  "{{ value_json.temperature }}", "temperature", "diagnostic", NULL },
-    { "bme280_humidity",        "Case Humidity",            "%",   "{{ value_json.humidity }}",    "humidity",    "diagnostic", NULL },
-    { "bme280_pressure",        "Atmospheric Pressure",     "hPa", "{{ value_json.pressure }}",    "pressure",    NULL,         NULL },
-    { "sht31_temperature",      "Temperature",              "°C",  "{{ value_json.temperature }}", "temperature", NULL,         NULL },
-    { "sht31_humidity",         "Humidity",                 "%",   "{{ value_json.humidity }}",    "humidity",    NULL,         NULL }
+    { "metrics",                "Uptime",                   "ms",  "{{ value_json.uptime_ms }}",    "duration",         "diagnostic", NULL },
+    { "rssi",                   "Wi-Fi RSSI",               "dBm", "{{ value_json.rssi }}",         "signal_strength",  "diagnostic", NULL },
+    { "ip_address",             "IP Address",               NULL,    "{{ value_json.ip_address }}",   NULL,               "diagnostic", NULL },
+    { "bme280_temperature",     "Case Temperature",         "°C",  "{{ value_json.temperature }}",  "temperature",      "diagnostic", NULL },
+    { "bme280_humidity",        "Case Humidity",            "%",   "{{ value_json.humidity }}",     "humidity",         "diagnostic", NULL },
+    { "bme280_pressure",        "Atmospheric Pressure",     "hPa", "{{ value_json.pressure }}",     "pressure",         NULL,         NULL },
+    { "sht31_temperature",      "Temperature",              "°C",  "{{ value_json.temperature }}",  "temperature",      NULL,         NULL },
+    { "sht31_humidity",         "Humidity",                 "%",   "{{ value_json.humidity }}",     "humidity",         NULL,         NULL }
 };
 
 
@@ -83,7 +86,9 @@ static void publish_HA_discovery_config(esp_mqtt_client_handle_t client,
     cJSON_AddStringToObject(root, "state_topic", sensor_topic);
     cJSON_AddStringToObject(root, "unit_of_measurement", unit);
     cJSON_AddStringToObject(root, "value_template", value_template);
-    cJSON_AddStringToObject(root, "unique_id", unique_id);  // <-- patched
+    cJSON_AddStringToObject(root, "unique_id", unique_id);
+    /* force the Entity Registry object_id to be exactly our suffix */
+    cJSON_AddStringToObject(root, "object_id", suffix);
     if (device_class) {
         cJSON_AddStringToObject(root, "device_class", device_class);
     }
@@ -156,6 +161,10 @@ static void publish_all_discovery_configs(esp_mqtt_client_handle_t client, app_c
             sensors[i].sensor_topic = ctx->sensor_bme280_topic;
         } else if (strstr(sensors[i].suffix, "sht31")) {
             sensors[i].sensor_topic = ctx->sensor_sht31_topic;
+        } else if (strstr(sensors[i].suffix, "metrics")
+            || strcmp(sensors[i].suffix, "rssi") == 0
+            || strcmp(sensors[i].suffix, "ip_address") == 0) {
+            sensors[i].sensor_topic = ctx->metrics_topic;
         } else {
             ESP_LOGW(TAG, "Skipping unknown sensor suffix: %s", sensors[i].suffix);
             continue;
@@ -406,30 +415,37 @@ void mqtt_task(void *pvParameters)
         }
 
         switch (req.type) {
-            case MSG_METRICS: {
-                system_metrics_t *m = &req.data.metrics;
-                char payload[128] = {0};
-                snprintf(payload, sizeof(payload),
-                    "{\"uptime_ms\":%lu,"
-                    "\"min_free_heap\":%lu,"
-                    "\"free_heap\":%lu,"
-                    "\"stack_watermark\":%lu"
-                    "}",
-                    m->uptime_ms,
-                    m->min_free_heap,
-                    m->free_heap,
-                    m->stack_watermark
-                );
-
-                int msg_id = esp_mqtt_client_publish(
-                    ctx->mqtt_client,
-                    ctx->metrics_topic,
-                    payload,
-                    0,
-                    1,      /* QoS 1 */
-                    0       /* not retained */
-                );
-                ESP_LOGI(TAG, "Published metrics: %s (msg_id=%d)", payload, msg_id);
+        case MSG_METRICS: {
+            system_metrics_t *m = &req.data.metrics;
+            // Make buffer big enough for the extra fields
+            char payload[256] = {0};
+                
+            // Build JSON with uptime, heap stats, RSSI and IP address
+            snprintf(payload, sizeof(payload),
+                "{"
+                  "\"uptime_ms\":%lu,"
+                  "\"min_free_heap\":%lu,"
+                  "\"free_heap\":%lu,"
+                  "\"stack_watermark\":%lu,"
+                  "\"rssi\":%ld,"
+                  "\"ip_address\":\"%s\""
+                "}",
+                m->uptime_ms,
+                m->min_free_heap,
+                m->free_heap,
+                m->stack_watermark,
+                m->wifi_rssi,
+                m->ip_address
+            );
+        
+            int msg_id = esp_mqtt_client_publish(
+                ctx->mqtt_client,
+                ctx->metrics_topic,
+                payload,
+                0,
+                1,      /* QoS 1 */
+                0       /* not retained */);
+            ESP_LOGI(TAG, "Published metrics: %s (msg_id=%d)", payload, msg_id);
             } break;
 
             case MSG_SENSOR: {
