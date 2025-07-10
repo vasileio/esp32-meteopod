@@ -133,6 +133,30 @@ static void clear_HA_discovery_configs(esp_mqtt_client_handle_t client, const ch
     }
 }
 
+/**
+ * Map a sensor‐suffix to the correct MQTT topic string in ctx.
+ * Returns NULL if we don’t know that suffix, so the caller can skip it.
+ */
+static const char *get_topic_for_suffix(const char *suffix, app_ctx_t *ctx) {
+    // BME280 sensors all start with "bme280"
+    if (strncmp(suffix, "bme280", 6) == 0) {
+        return ctx->sensor_bme280_topic;
+    }
+    // SHT31 sensors all start with "sht31"
+    if (strncmp(suffix, "sht31", 5) == 0) {
+        return ctx->sensor_sht31_topic;
+    }
+    // Everything else on the single "metrics" topic
+    if (strcmp(suffix, "metrics")   == 0 ||
+        strcmp(suffix, "rssi")      == 0 ||
+        strcmp(suffix, "ip_address")== 0) {
+        return ctx->metrics_topic;
+    }
+    // (If you add a new topic, just insert another clause here)
+    return NULL;
+}
+
+
 
 /**
  * @brief Publish MQTT discovery configuration for all known sensors to Home Assistant.
@@ -147,40 +171,39 @@ static void publish_all_discovery_configs(esp_mqtt_client_handle_t client, app_c
 {
     const char *mac = ctx->device_mac_str;
     char device_id[64];
-    snprintf(device_id, sizeof(device_id), "esp32-meteopod-%s", mac);
+    snprintf(device_id, sizeof(device_id),
+             "esp32-meteopod-%s", mac);
 
-    /* Clear any stale discovery configs first */
+    /* 1) clear any old retained configs */
     clear_HA_discovery_configs(client, mac);
 
+    /* 2) copy the static sensor‐definitions */
     ha_sensor_config_t sensors[ARRAY_SIZE(ha_sensors)];
     memcpy(sensors, ha_sensors, sizeof(ha_sensors));
 
+    /* 3) single, clean loop */
     for (size_t i = 0; i < ARRAY_SIZE(sensors); ++i) {
-        // Assign correct sensor topic based on suffix
-        if (strstr(sensors[i].suffix, "bme280")) {
-            sensors[i].sensor_topic = ctx->sensor_bme280_topic;
-        } else if (strstr(sensors[i].suffix, "sht31")) {
-            sensors[i].sensor_topic = ctx->sensor_sht31_topic;
-        } else if (strstr(sensors[i].suffix, "metrics")
-            || strcmp(sensors[i].suffix, "rssi") == 0
-            || strcmp(sensors[i].suffix, "ip_address") == 0) {
-            sensors[i].sensor_topic = ctx->metrics_topic;
-        } else {
-            ESP_LOGW(TAG, "Skipping unknown sensor suffix: %s", sensors[i].suffix);
+        const char *topic = get_topic_for_suffix(sensors[i].suffix, ctx);
+        if (!topic) {
+            ESP_LOGW(TAG, "Skipping unknown sensor suffix: %s",
+                     sensors[i].suffix);
             continue;
         }
+        sensors[i].sensor_topic = topic;
 
-        publish_HA_discovery_config(client,
-                                    mac,
-                                    sensors[i].suffix,
-                                    sensors[i].name,
-                                    sensors[i].unit,
-                                    sensors[i].value_template,
-                                    sensors[i].device_class,
-                                    sensors[i].entity_category,
-                                    sensors[i].sensor_topic,
-                                    device_id,
-                                    "ESP32 Meteopod");
+        publish_HA_discovery_config(
+            client,
+            mac,
+            sensors[i].suffix,
+            sensors[i].name,
+            sensors[i].unit,
+            sensors[i].value_template,
+            sensors[i].device_class,
+            sensors[i].entity_category,
+            sensors[i].sensor_topic,
+            device_id,
+            "ESP32 Meteopod"
+        );
     }
 }
 
