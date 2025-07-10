@@ -1,44 +1,74 @@
-#ifndef SHT31_SENSOR_H
-#define SHT31_SENSOR_H
+/**
+ * @file sht31_espidf_driver.h
+ * @brief ESP-IDF SHT31 sensor driver using i2c_master API
+ *
+ * Adapted for Meteopod project, mirrors BME280 driver style.
+ * License: BSD
+ */
 
-#include "esp_err.h"
-#include "esp_log.h"
-#include "esp_rom_crc.h"
+#pragma once
+
 #include "driver/i2c_master.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-
-/* Default 7-bit I²C address for SHT31 (ADDR pin low) */
-#define SHT31_I2C_ADDR_DEFAULT   0x44
-
-#define SHT31_I2C_SPEED   100000U
-#define SHT31_CRC8_INIT  0xFF
+#include "esp_err.h"
+#include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /**
- * @brief Initialize the SHT31 sensor on the given I2C bus.
- *
- * @param bus_handle I2C master bus handle from i2c_init()
- * @param dev_addr 7-bit I2C address (e.g., 0x44)
- * @param clk_speed_hz I2C clock speed for this device (e.g., 100000)
- * @return esp_err_t ESP_OK on success, error code otherwise
+ * Handle for SHT31 device
  */
-esp_err_t sht31_init(i2c_master_bus_handle_t bus_handle, uint8_t dev_addr, uint32_t clk_speed_hz);
+typedef struct {
+    bool initialised;
+    i2c_master_bus_handle_t bus;
+    i2c_master_dev_handle_t dev;
+} sht31_handle_t;
+
+/** Default I2C address */
+#define SHT31_ADDR_DEFAULT        0x44
+
+/** Commands */
+#define SHT31_CMD_MEAS_HIGHREP    0x2400
+#define SHT31_CMD_READSTATUS      0xF32D
+#define SHT31_CMD_SOFTRESET       0x30A2
+#define SHT31_CMD_HEATEREN        0x306D
+#define SHT31_CMD_HEATERDIS       0x3066
+#define SHT31_STATUS_HEATER_BIT   0x0008
 
 /**
- * @brief Read temperature and humidity from the SHT31 sensor.
- *
- * @param temperature Pointer to float to receive temperature in Celsius
- * @param humidity Pointer to float to receive relative humidity in %%
- * @return esp_err_t ESP_OK on success, error code otherwise
+ * @brief Initialize SHT31 on given I2C port and address.
+ * @param h    Handle to initialize
+ * @param port I2C peripheral (e.g. I2C_NUM_0)
+ * @param addr I2C address (use SHT31_ADDR_DEFAULT)
+ * @return ESP_OK on success
  */
-esp_err_t sht31_read(float *temperature, float *humidity);
+esp_err_t sht31_init(sht31_handle_t *h, i2c_port_t port, uint8_t addr);
+
+/**
+ * @brief Deinitialize the device
+ */
+esp_err_t sht31_deinit(sht31_handle_t *h);
+
+/** Read status register */
+esp_err_t sht31_read_status(sht31_handle_t *h, uint16_t *status);
+
+/** Soft reset sensor */
+esp_err_t sht31_reset(sht31_handle_t *h);
+
+/** Enable/disable heater */
+esp_err_t sht31_heater(sht31_handle_t *h, bool enable);
+
+/** Read both temperature (°C) and humidity (%%RH) */
+esp_err_t sht31_read_temp_hum(sht31_handle_t *h, float *temperature, float *humidity);
+
+/** Read only temperature */
+esp_err_t sht31_read_temperature(sht31_handle_t *h, float *temperature);
+
+/** Read only humidity */
+esp_err_t sht31_read_humidity(sht31_handle_t *h, float *humidity);
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif // SHT31_SENSOR_H

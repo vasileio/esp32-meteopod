@@ -36,6 +36,7 @@ typedef struct {
     /* Buses & peripherals */
     i2c_master_bus_handle_t     i2c_bus;
     DFRobot_rainfall_sensor_t   rain_sensor;
+    sht31_handle_t              sh31_sensor;
 
     /* Queues */
     QueueHandle_t               sensorDataQueue;

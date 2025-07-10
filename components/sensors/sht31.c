@@ -1,98 +1,124 @@
+/**
+ * @file sht31_espidf_driver.c
+ * @brief Implementation of SHT31 driver using i2c_master API
+ */
+
 #include "sht31.h"
+#include "driver/i2c_master.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_err.h"
+#include "esp_log.h"
+#include "esp_check.h"
+#include <string.h>
 
-static const char *TAG = "SHT31";
-static i2c_master_dev_handle_t dev_handle;
+// CRC8 polynomial 0x31
+static uint8_t sht31_crc8(const uint8_t *data, int len) {
+    const uint8_t POLY = 0x31;
+    uint8_t crc = 0xFF;
+    for (int i = 0; i < len; i++) {
+        crc ^= data[i];
+        for (int bit = 0; bit < 8; bit++) {
+            crc = (crc & 0x80) ? (crc << 1) ^ POLY : (crc << 1);
+        }
+    }
+    return crc;
+}
 
-/* High-repeatability measurement command (no clock stretching) */
-static const uint16_t CMD_MEAS_HIGHREP = 0x2400;
+esp_err_t sht31_init(sht31_handle_t *h, i2c_port_t port, uint8_t addr) {
+    ESP_RETURN_ON_FALSE(h, ESP_ERR_INVALID_ARG, "sht31", "null handle");
 
-/*
- * @brief  Initialize SHT31 on given I2C bus
- * @param  bus_handle: handle to an already configured I2C bus
- * @param  dev_addr:   7-bit I2C address of the SHT31 sensor
- * @param  clk_speed_hz: I2C clock speed
- * @return ESP_OK on success, otherwise an ESP_ERR code
- */
-esp_err_t sht31_init(i2c_master_bus_handle_t bus_handle, uint8_t dev_addr, uint32_t clk_speed_hz)
-{
-    i2c_device_config_t dev_cfg = {
-        .device_address  = dev_addr,
+    // Get bus handle
+    esp_err_t err = i2c_master_get_bus_handle(port, &h->bus);
+    ESP_RETURN_ON_ERROR(err, "sht31", "get bus");
+
+    // Add device
+    i2c_device_config_t dev_conf = {
         .dev_addr_length = I2C_ADDR_BIT_LEN_7,
-        .scl_speed_hz    = clk_speed_hz,
+        .device_address  = addr,
+        .scl_speed_hz    = 100000
     };
+    err = i2c_master_bus_add_device(h->bus, &dev_conf, &h->dev);
+    ESP_RETURN_ON_ERROR(err, "sht31", "add device");
 
-    esp_err_t err = i2c_master_bus_add_device(bus_handle, &dev_cfg, &dev_handle);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to add device to bus: %s", esp_err_to_name(err));
-        return err;
-    }
+    // Soft reset
+    sht31_reset(h);
+    vTaskDelay(pdMS_TO_TICKS(10));
 
+    // Verify status != 0xFFFF
+    uint16_t status;
+    err = sht31_read_status(h, &status);
+    ESP_RETURN_ON_ERROR(err, "sht31", "read status");
+    ESP_RETURN_ON_FALSE(status != 0xFFFF, ESP_ERR_INVALID_STATE, "sht31", "bad status");
+
+    h->initialised = true;
     return ESP_OK;
 }
 
-/*
- * @brief  Send a 16-bit command to the sensor
- * @param  cmd: command word
- * @return ESP_OK on success, otherwise an ESP_ERR code
- */
-static esp_err_t i2c_write_cmd(uint16_t cmd)
-{
-    uint8_t data[2] = {
-        (uint8_t)(cmd >> 8),
-        (uint8_t)(cmd & 0xFF)
-    };
-
-    esp_err_t ret = i2c_master_transmit(dev_handle, data, sizeof(data), pdMS_TO_TICKS(1000));
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "I2C transmit failed: %s", esp_err_to_name(ret));
-        return ret;
-    }
-
+esp_err_t sht31_deinit(sht31_handle_t *h) {
+    ESP_RETURN_ON_FALSE(h && h->initialised, ESP_ERR_INVALID_STATE, "sht31", "not init");
+    // Remove device
+    esp_err_t err = i2c_master_bus_rm_device(h->dev);
+    ESP_RETURN_ON_ERROR(err, "sht31", "rm device");
+    h->initialised = false;
     return ESP_OK;
 }
 
-/*
- * @brief  Read temperature and humidity from SHT31
- * @param  temperature: pointer to store Celsius temperature
- * @param  humidity:    pointer to store relative humidity (%)
- * @return ESP_OK on success, ESP_ERR_INVALID_CRC on CRC failure, otherwise an ESP_ERR code
- */
-esp_err_t sht31_read(float *temperature, float *humidity)
-{
-    esp_err_t ret;
+esp_err_t sht31_read_status(sht31_handle_t *h, uint16_t *status) {
+    ESP_RETURN_ON_FALSE(h && status, ESP_ERR_INVALID_ARG, "sht31", "bad args");
+    uint8_t cmd[2] = { SHT31_CMD_READSTATUS >> 8, SHT31_CMD_READSTATUS & 0xFF };
+    uint8_t buf[3];
+    esp_err_t err = i2c_master_transmit_receive(h->dev, cmd, 2, buf, 3, portMAX_DELAY);
+    ESP_RETURN_ON_ERROR(err, "sht31", "tx_rx status");
+    *status = (buf[0] << 8) | buf[1];
+    return ESP_OK;
+}
 
-    /* Trigger a single high-repeatability measurement */
-    ret = i2c_write_cmd(CMD_MEAS_HIGHREP);
-    if (ret != ESP_OK) {
-        return ret;
-    }
+esp_err_t sht31_reset(sht31_handle_t *h) {
+    ESP_RETURN_ON_FALSE(h && h->initialised, ESP_ERR_INVALID_STATE, "sht31", "not init");
+    uint8_t cmd[2] = { SHT31_CMD_SOFTRESET >> 8, SHT31_CMD_SOFTRESET & 0xFF };
+    return i2c_master_transmit(h->dev, cmd, 2, portMAX_DELAY);
+}
 
-    /* Wait for the measurement to complete (~15 ms) */
-    vTaskDelay(pdMS_TO_TICKS(15));
+esp_err_t sht31_heater(sht31_handle_t *h, bool enable) {
+    ESP_RETURN_ON_FALSE(h && h->initialised, ESP_ERR_INVALID_STATE, "sht31", "not init");
+    uint16_t c = enable ? SHT31_CMD_HEATEREN : SHT31_CMD_HEATERDIS;
+    uint8_t cmd[2] = { c >> 8, c & 0xFF };
+    return i2c_master_transmit(h->dev, cmd, 2, portMAX_DELAY);
+}
+
+esp_err_t sht31_read_temp_hum(sht31_handle_t *h, float *temperature, float *humidity) {
+    ESP_RETURN_ON_FALSE(h && h->initialised, ESP_ERR_INVALID_STATE, "sht31", "not init");
+    uint8_t cmd[2] = { SHT31_CMD_MEAS_HIGHREP >> 8, SHT31_CMD_MEAS_HIGHREP & 0xFF };
+    esp_err_t err = i2c_master_transmit(h->dev, cmd, 2, portMAX_DELAY);
+    ESP_RETURN_ON_ERROR(err, "sht31", "tx measure");
+    vTaskDelay(pdMS_TO_TICKS(20));
 
     uint8_t buf[6];
-    ret = i2c_master_receive(dev_handle, buf, sizeof(buf), pdMS_TO_TICKS(1000));
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "I2C receive failed: %s", esp_err_to_name(ret));
-        return ret;
-    }
+    err = i2c_master_receive(h->dev, buf, 6, portMAX_DELAY);
+    ESP_RETURN_ON_ERROR(err, "sht31", "rx data");
 
-    /* CRC verification using ROM routine */
-    if (esp_rom_crc8_be(SHT31_CRC8_INIT, buf, 2) != buf[2]) {
-        ESP_LOGE(TAG, "Temperature CRC mismatch");
-        return ESP_ERR_INVALID_CRC;
-    }
-    if (esp_rom_crc8_be(SHT31_CRC8_INIT, buf + 3, 2) != buf[5]) {
-        ESP_LOGE(TAG, "Humidity CRC mismatch");
-        return ESP_ERR_INVALID_CRC;
-    }
+    // CRC checks
+    ESP_RETURN_ON_FALSE(buf[2] == sht31_crc8(buf,2) && buf[5] == sht31_crc8(buf+3,2),
+        ESP_ERR_INVALID_CRC, "sht31", "crc fail");
 
-    uint16_t raw_t = (buf[0] << 8) | buf[1];
-    uint16_t raw_h = (buf[3] << 8) | buf[4];
+    // Temperature
+    uint16_t raw_t = (buf[0]<<8) | buf[1];
+    int32_t st = ((4375 * (int32_t)raw_t) >> 14) - 4500;
+    if (temperature) *temperature = st / 100.0f;
 
-    /* Convert to human-readable values */
-    *temperature = -45.0f + 175.0f * ((float)raw_t / 65535.0f);
-    *humidity    = 100.0f * ((float)raw_h / 65535.0f);
+    // Humidity
+    uint16_t raw_h = (buf[3]<<8) | buf[4];
+    uint32_t sh = (625 * (uint32_t)raw_h) >> 12;
+    if (humidity) *humidity = sh / 100.0f;
 
     return ESP_OK;
+}
+
+esp_err_t sht31_read_temperature(sht31_handle_t *h, float *temperature) {
+    return sht31_read_temp_hum(h, temperature, NULL);
+}
+
+esp_err_t sht31_read_humidity(sht31_handle_t *h, float *humidity) {
+    return sht31_read_temp_hum(h, NULL, humidity);
 }
