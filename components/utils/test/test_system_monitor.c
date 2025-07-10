@@ -71,8 +71,8 @@ TEST_CASE("get_system_metrics returns sane, non crashing values", "[system_monit
     TEST_ASSERT_LESS_OR_EQUAL_UINT_MESSAGE(
         m1.min_free_heap, m1.free_heap,
         "min_free_heap should be <= free_heap");
-    TEST_ASSERT_TRUE_MESSAGE(m1.uptime_ms >= 0,
-        "uptime_ms must be non-negative");
+    TEST_ASSERT_TRUE_MESSAGE(m1.uptime_ms > 0,
+        "uptime_ms must be positive");
     TEST_ASSERT_TRUE_MESSAGE(m1.stack_watermark > 0,
         "stack_watermark must be > 0");
 
