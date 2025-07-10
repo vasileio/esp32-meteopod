@@ -153,12 +153,15 @@ static void mqtt_event_handler(void *arg,
             if (strcmp(topic_buf, ctx->ota_cmd_topic) == 0 &&
                 strcmp(data_buf, "update") == 0) {
                 ESP_LOGW(TAG, "OTA update via MQTT");
-                safe_mqtt_publish(evt->client,
-                                  ctx->ota_status_topic,
-                                  "OTA started",
-                                  0,
-                                  1,
-                                  0);
+                int msg_id = esp_mqtt_client_publish(
+                    evt->client,
+                    ctx->ota_status_topic,
+                    "OTA started",
+                    0,
+                    1,      /* QoS 1 */
+                    0       /* not retained */
+                );
+                ESP_LOGI(TAG, "Published \"OTA started\" (msg_id=%d)", msg_id);
                 xTaskCreate(&ota_update_task,
                             "ota_update", 8192, ctx, 5, NULL);
             }
@@ -188,7 +191,7 @@ void mqtt_task(void *pvParameters)
     EventBits_t bits;
 
     const esp_mqtt_client_config_t mqtt_cfg = {
-        .broker.address.uri = "mqtt://192.168.1.118:1883"
+        .broker.address.uri = CONFIG_MQTT_BROKER_URI
     };
 
     ctx->mqtt_client = esp_mqtt_client_init(&mqtt_cfg);
@@ -224,8 +227,7 @@ void mqtt_task(void *pvParameters)
             case MSG_METRICS: {
                 system_metrics_t *m = &req.data.metrics;
                 char payload[128] = {0};
-                char buf[128];
-                int len = snprintf(payload, sizeof(payload),
+                snprintf(payload, sizeof(payload),
                     "{\"uptime_ms\":%lu,"
                     "\"min_free_heap\":%lu,"
                     "\"free_heap\":%lu,"

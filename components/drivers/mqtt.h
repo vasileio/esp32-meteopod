@@ -13,6 +13,7 @@
 #include "system_monitor.h"
 #include <string.h>
 #include "app_context.h"
+#include "sdkconfig.h"
 
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
