@@ -8,6 +8,7 @@
  */
 
 #include "ota_update.h"
+#include "app_context.h"
 
 static const char *TAG = "ota_update";
 static SemaphoreHandle_t ota_mutex = NULL;

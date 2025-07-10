@@ -1,0 +1,147 @@
+/**
+ * @file sensors.c
+ * @brief Sensor initialization and data acquisition implementation.
+ */
+
+#include "sensors.h"
+#include "app_context.h"
+#include "mqtt.h"
+
+static const char *TAG = "SENSORS";
+
+static bme280_handle_t bme_handle;  // static so it lives forever
+
+/**
+ * @brief Initialize BME280 sensor component
+ */
+static esp_err_t bme280_component_init(void *pvParameters) {
+
+    // app_ctx_t *ctx = (app_ctx_t *)pvParameters;  
+
+    // Configure BME280 for weather monitoring
+
+    bme280_config_t config = {
+        .osrs_t       = BME280_OSRS_X2,      // temp ×2
+        .osrs_p       = BME280_OSRS_X16,     // press ×16
+        .osrs_h       = BME280_OSRS_X1,      // hum ×1
+        .filter       = BME280_FILTER_4,     // IIR=4
+        .standby_time = BME280_STANDBY_1000, // 1000 ms
+        .mode         = BME280_MODE_FORCED,  // on-demand
+    };
+    
+    esp_err_t ret = bme280_init(&bme_handle, I2C_PORT, BME280_I2C_ADDR, &config);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "BME280 initialization failed: %s", esp_err_to_name(ret));
+        return ret;
+    }
+    
+    ESP_LOGI(TAG, "BME280 sensor initialized successfully");
+    return ESP_OK;
+}
+
+static esp_err_t read_bme280_measurement(bme280_handle_t *handle, bme280_data_t *out_data)
+{
+    TickType_t start_tick = xTaskGetTickCount();
+    const TickType_t timeout_ticks = pdMS_TO_TICKS(BME280_READY_TIMEOUT_MS);
+    bool ready = false;
+    esp_err_t err;
+
+    bme280_trigger_measurement(handle);
+
+    // Wait for measurement to be ready (with timeout)
+    do {
+        err = bme280_is_meas_ready(handle, &ready);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "BME280 readiness check failed: %s", esp_err_to_name(err));
+            return err;
+        }
+
+        if (ready) {
+            break;
+        }
+
+        if ((xTaskGetTickCount() - start_tick) > timeout_ticks) {
+            ESP_LOGW(TAG, "BME280 not ready after %d ms", BME280_READY_TIMEOUT_MS);
+            return ESP_ERR_TIMEOUT;
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(BME280_POLL_INTERVAL_MS));
+    } while (1);
+
+    // Now actually read the data
+    err = bme280_read_data(handle, out_data);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to read BME280 data: %s", esp_err_to_name(err));
+    }
+    return err;
+}
+
+
+void sensors_init(void *pvParameters)
+{
+    esp_err_t ret;
+
+    // app_ctx_t *ctx = (app_ctx_t *)pvParameters;  
+
+    /* Initialize BME280 temperature/humidity/pressure sensor */
+    ret = bme280_component_init(pvParameters);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "BME280 init failed: %s", esp_err_to_name(ret));
+    } else {
+        ESP_LOGI(TAG, "BME280 initialized");
+    }
+
+
+    /* TODO: Add initialization for additional sensors here */
+}
+
+void sensors_task(void *pvParameters)
+{
+    app_ctx_t *ctx = (app_ctx_t *)pvParameters;
+    bme280_data_t bme280_data;
+    mqtt_queue_item_t   item;
+    esp_err_t err;
+
+    item.type = MSG_SENSOR;
+
+    /* Ensure sensors are initialized */
+    sensors_init(pvParameters);
+
+    while (1) {
+        /* BME280 */
+
+        // Try to read — on error, just warn and continue
+        err = read_bme280_measurement(&bme_handle, &bme280_data);
+        if (err != ESP_OK) {
+            ESP_LOGW(TAG, "BME280 read error (continuing): %s", esp_err_to_name(err));
+        } else {
+            /* Acquire mutex before updating shared context */
+            if (xSemaphoreTake(ctx->sensorDataMutex, portMAX_DELAY) == pdTRUE) {
+                ctx->sensor_readings.bme280_readings.temperature = bme280_data.temperature;
+                ctx->sensor_readings.bme280_readings.humidity   = bme280_data.humidity;
+                ctx->sensor_readings.bme280_readings.pressure   = bme280_data.pressure;
+                xSemaphoreGive(ctx->sensorDataMutex);
+                
+                /* Copy into our queue item */
+                item.data.sensor.bme280_readings = bme280_data;
+
+                /* Enqueue for the MQTT task to format & publish */
+                if (xQueueSend(ctx->mqttPublishQueue, &item, portMAX_DELAY) != pdTRUE) {
+                    ESP_LOGW(TAG, "MQTT metrics queue full, dropping heartbeat");
+                }
+
+                /* Log from the local buffer (no need to hold the lock while logging) */
+                ESP_LOGI(TAG, "Temperature: %.2f °C", bme280_data.temperature);
+                ESP_LOGI(TAG, "Humidity:    %.2f %%RH", bme280_data.humidity);
+                ESP_LOGI(TAG, "Pressure:    %.2f hPa", bme280_data.pressure);
+            } else {
+                ESP_LOGW(TAG, "Failed to take sensorDataMutex");
+            }
+
+        }
+
+        /* TODO: Read additional sensors here */
+
+        vTaskDelay(pdMS_TO_TICKS(SENSOR_READ_INTERVAL_MS));
+    }
+}

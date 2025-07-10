@@ -1,4 +1,7 @@
 #include "system_monitor.h"
+#include "app_context.h"
+#include "mqtt.h"
+
 
 static const char *TAG = "SYSTEM_MONITOR";
 
@@ -16,46 +19,38 @@ system_metrics_t get_system_metrics(void)
 
 void log_system_metrics(const system_metrics_t *metrics)
 {
-    ESP_LOGI(TAG, "Free Heap: %d bytes, Min Free Heap: %d bytes",
+    ESP_LOGI(TAG, "Free Heap: %lu bytes, Min Free Heap: %lu bytes",
              metrics->free_heap, metrics->min_free_heap);
-    ESP_LOGI(TAG, "Uptime: %lld ms", metrics->uptime_ms);
-    ESP_LOGI(TAG, "Task Stack High Water Mark: %u bytes",
+    ESP_LOGI(TAG, "Uptime: %lu ms", metrics->uptime_ms);
+    ESP_LOGI(TAG, "Task Stack High Water Mark: %lu bytes",
              metrics->stack_watermark);
 }
 
 void system_monitor_task(void *pvParameters)
 {
-    app_ctx_t *ctx = pvParameters;
-    char heartbeat_topic[TOPIC_PREFIX_LEN + sizeof("/availability")];
+    app_ctx_t *ctx =    pvParameters;
+    mqtt_queue_item_t   item;
+    system_metrics_t    metrics;
 
-    /* Build the heartbeat topic "<prefix>/availability" */
-    esp_err_t err = utils_build_topic(
-        ctx->topic_prefix,
-        "availability",
-        heartbeat_topic,
-        sizeof(heartbeat_topic)
-    );
+    item.type = MSG_METRICS;
 
-    if (ESP_OK != err) 
-    {
-        ESP_LOGE(TAG, "Failed to build heartbeat topic (err=%d)", err);
-        vTaskDelete(NULL);
-        return;
-    }
-
-    mqtt_publish_req_t heartbeat = {
-            .topic  = heartbeat_topic,
-            .payload= "online",
-            .len    = strlen("online"),
-            .qos    = 1,
-            .retain = 1
-    };
 
     while (1) 
     {
-        system_metrics_t metrics = get_system_metrics();
+        // 1) Collect metrics
+        metrics = get_system_metrics();
+
+        // 2) Log locally
         log_system_metrics(&metrics);
-        xQueueSend(ctx->mqttPublishQueue, &heartbeat, portMAX_DELAY);
+
+        // 3) Copy into our queue item
+        item.data.metrics = metrics;
+
+        // 4) Enqueue for the MQTT task to format & publish
+        if (xQueueSend(ctx->mqttPublishQueue, &item, portMAX_DELAY) != pdTRUE) {
+            ESP_LOGW(TAG, "MQTT metrics queue full, dropping heartbeat");
+        }
+
         vTaskDelay(pdMS_TO_TICKS(10000));
     }
 }

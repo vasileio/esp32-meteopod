@@ -10,4 +10,4 @@ set(EXTRA_COMPONENT_DIRS "../components")
 set(TEST_COMPONENTS "utils sensors")
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(example_test_app)
+project(esp32_meteopod_test_app)

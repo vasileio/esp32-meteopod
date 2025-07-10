@@ -30,7 +30,7 @@ static void blink_task(void *pvParameters)
 
 void app_main(void)
 {
-    static app_ctx_t ctx;  // all shared state
+    static app_ctx_t ctx;
 
     ESP_LOGI(TAG, "System booting…");
 
@@ -43,6 +43,22 @@ void app_main(void)
         ESP_LOGE(TAG, "I2C init failed: %s", esp_err_to_name(err));
         return;
     }
+
+    const esp_app_desc_t *desc = esp_app_get_description();
+    ESP_LOGI(TAG, "Firmware version: %s", desc->version);
+
+    /* Queues & mutex */
+    ctx.commandQueue    = xQueueCreate(10, sizeof(uart_event_t));
+
+    ctx.mqttPublishQueue = xQueueCreate( 10, sizeof(mqtt_queue_item_t));
+    configASSERT(ctx.mqttPublishQueue);
+    
+    ctx.mqttEventGroup = xEventGroupCreate();
+    configASSERT(ctx.mqttEventGroup);
+
+    ctx.sensorDataMutex = xSemaphoreCreateMutex();
+
+    /* Build MQTT topics */
     /* 1) Read raw MAC */
     esp_read_mac(ctx.device_mac, ESP_MAC_WIFI_STA);
 
@@ -56,38 +72,14 @@ void app_main(void)
              ctx.device_mac[3],
              ctx.device_mac[4],
              ctx.device_mac[5]);
+    /* 3) Build the rest of the mqtt topics */
+     mqtt_build_all_topics(&ctx);
 
-    /* 3) Build topic prefix "meteopod/<MAC>" */
-    snprintf(ctx.topic_prefix,
-             TOPIC_PREFIX_LEN,
-             "meteopod/%s",
-             ctx.device_mac_str);
+    /* Create tasks */
+    xTaskCreate(watchdog_task,        "watchdog",     STACK_WATCHDOG_WORDS, &ctx, PRIO_WATCHDOG, &ctx.watchdogTaskHandle);
+    xTaskCreate(blink_task,           "blink",        STACK_BLINK_WORDS,    &ctx, PRIO_BLINK,    &ctx.blinkTaskHandle);
+    xTaskCreate(system_monitor_task,  "monitor",      STACK_MONITOR_WORDS,  &ctx, PRIO_MONITOR,  &ctx.monitorTaskHandle);
+    xTaskCreate(mqtt_task,            "mqtt_task",    STACK_MQTT_WORDS,     &ctx, PRIO_MQTT,     &ctx.mqttTaskHandle);
+    xTaskCreate(sensors_task,         "sensors_task", STACK_SENSORS_WORDS,  &ctx, PRIO_SENSORS,  &ctx.sensorTaskHandle);
 
-    snprintf(ctx.ota_cmd_topic,
-            sizeof(ctx.ota_cmd_topic),
-            "%s/ota/update",
-            ctx.topic_prefix);
-
-    // Build OTA status topic: meteopod/<mac>/ota/status
-    snprintf(ctx.ota_status_topic,
-            sizeof(ctx.ota_status_topic),
-            "%s/ota/status",
-            ctx.topic_prefix);
-
-    /* 4) Print them out */
-    ESP_LOGI(TAG, "Device MAC: %s",        ctx.device_mac_str);
-    ESP_LOGI(TAG, "MQTT topic prefix: %s", ctx.topic_prefix);
-
-    const esp_app_desc_t *desc = esp_app_get_description();
-    ESP_LOGI(TAG, "Firmware version: %s", desc->version);
-
-    /* Queues & mutex */
-    ctx.commandQueue    = xQueueCreate(10, sizeof(uart_event_t));
-    ctx.sensorDataMutex = xSemaphoreCreateMutex();
-
-    /* Spawn tasks */
-    xTaskCreate(watchdog_task,        "watchdog",  2048, &ctx, 6, &ctx.watchdogTaskHandle);
-    xTaskCreate(blink_task,           "blink",     3072, &ctx, 1, &ctx.blinkTaskHandle);
-    xTaskCreate(system_monitor_task,  "monitor",   4096, &ctx, 1, &ctx.monitorTaskHandle);
-    xTaskCreate(mqtt_task,            "mqtt_task", 4096, &ctx, 5, &ctx.mqttTaskHandle);
 }

@@ -8,4 +8,10 @@ config WIFI_PASS
     string "Wi-Fi Password"
     default "mypassword"
 
+config MQTT_BROKER_URI
+    string "MQTT broker URI"
+    default "mqtt://192.168.1.1:1883"
+    help
+      URI of the MQTT broker, e.g. mqtt://host:port
+
 endmenu

@@ -1,18 +1,26 @@
 #ifndef APP_CONTEXT_H
 #define APP_CONTEXT_H
 
+/* ESP headers */
 #include "esp_timer.h"
-
 #include "driver/i2c_master.h"
 
+/* FreeRTOS headers */
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
 
+/* Sensor headers */
+#include "sensors.h"
 #include "dfrobot_rainfall_sensor.h"
 #include "sht31.h"
-#include "mqtt.h"
+#include "bme280.h"
+
+/* MQTT */
+// #include "mqtt.h"
+typedef struct esp_mqtt_client* esp_mqtt_client_handle_t;  /**< Forward‐declare the MQTT client handle */
+
 
 
 /* Raw MAC is 6 bytes */
@@ -22,37 +30,50 @@
 /* "meteopod/" is 9 chars, plus MAC_STR_LEN */
 #define TOPIC_PREFIX_LEN  (9 + MAC_STR_LEN)
 
+#define TOPIC_LEN 64
+
 typedef struct {
     /* Buses & peripherals */
     i2c_master_bus_handle_t     i2c_bus;
     DFRobot_rainfall_sensor_t   rain_sensor;
 
-    /* Queues & mutexes */
+    /* Queues */
     QueueHandle_t               sensorDataQueue;
     QueueHandle_t               commandQueue;
+    QueueHandle_t               mqttPublishQueue;
+
+    /* Mutexes */
     SemaphoreHandle_t           sensorDataMutex;
 
     /* Tasks */
     TaskHandle_t                sensorTaskHandle;
-    TaskHandle_t                loggingTaskHandle;
-    TaskHandle_t                commandTaskHandle;
     TaskHandle_t                watchdogTaskHandle;
     TaskHandle_t                blinkTaskHandle;
     TaskHandle_t                monitorTaskHandle;
-
-    /* Timer */
-    esp_timer_handle_t          periodic_timer;
-
-    /* MQTT */
-    esp_mqtt_client_handle_t    mqtt_client;
     TaskHandle_t                mqttTaskHandle;
-    QueueHandle_t               mqttPublishQueue;
+
+    /* Readings */
+    sensor_readings_t           sensor_readings;
+
+    /* MQTT client */
+    esp_mqtt_client_handle_t    mqtt_client;
     EventGroupHandle_t          mqttEventGroup;
-    uint8_t                     device_mac[MAC_RAW_LEN];         
-    char                        device_mac_str[MAC_STR_LEN];     
+
+    /* Identifiers & topics */
+    uint8_t                     device_mac[MAC_RAW_LEN];
+    char                        device_mac_str[MAC_STR_LEN];
     char                        topic_prefix[TOPIC_PREFIX_LEN];
-    char                        ota_cmd_topic[64];
-    char                        ota_status_topic[64];
+    char                        sensor_topic[TOPIC_LEN];
+    char                        metrics_topic[TOPIC_LEN];
+    char                        ota_topic[TOPIC_LEN];
+    char                        ota_cmd_topic[TOPIC_LEN];
+    char                        ota_status_topic[TOPIC_LEN];
+
+    /* Per‐sensor subtopics under <prefix>/sensor */
+    char                        sensor_bme280_topic[TOPIC_LEN];
+    char                        sensor_sht31_topic[TOPIC_LEN];
+    char                        sensor_rainfall_topic[TOPIC_LEN];
 } app_ctx_t;
+
 
 #endif  // APP_CONTEXT_H

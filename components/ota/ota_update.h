@@ -19,13 +19,25 @@ extern "C" {
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 #include "mqtt_client.h"
-#include "app_context.h"
 
 
 /* The URL to fetch the firmware binary from */
 #ifndef OTA_URL
 #define OTA_URL CONFIG_OTA_FIRMWARE_URL
 #endif
+
+
+/**
+ * @brief OTA (Over‐The‐Air) update status structure.
+ *
+ * Represents the current state and progress of an OTA operation.
+ */
+typedef struct {
+    char     status[16];  /**< Operation state: "idle", "started", "in_progress", "completed", or "failed". */
+    char     version[32]; /**< Firmware version being applied or currently running. */
+    uint8_t  progress;    /**< Percent completion (0–100), meaningful when status is "in_progress". */
+    char     error[128];  /**< Error message if status == "failed"; empty otherwise. */
+} ota_status_t;
 
 /**
  * @brief OTA update task.
