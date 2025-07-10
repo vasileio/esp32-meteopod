@@ -1,6 +1,6 @@
 #include "mqtt.h"
 
-#define TAG "mqtt_task"
+#define TAG "MQTT"
 
 /**
  * @brief Build all MQTT topics based on the device’s topic prefix.
@@ -173,6 +173,10 @@ static void mqtt_event_handler(void *arg,
 
         case MQTT_EVENT_SUBSCRIBED:
             ESP_LOGI(TAG, "Subscription acknowledged (msg_id=%d)", evt->msg_id);
+            break;
+
+        case MQTT_EVENT_BEFORE_CONNECT:
+            ESP_LOGI(TAG, "MQTT client initialized; about to connect to %s", CONFIG_MQTT_BROKER_URI);
             break;
 
         default:
