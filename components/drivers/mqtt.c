@@ -250,6 +250,31 @@ void mqtt_task(void *pvParameters)
                 ESP_LOGI(TAG, "Published metrics: %s (msg_id=%d)", payload, msg_id);
             } break;
 
+            case MSG_SENSOR: {
+                sensor_readings_t *m = &req.data.sensor;
+
+                /* BME280 */
+                char payload[128] = {0};
+                snprintf(payload, sizeof(payload),
+                    "{\"temperature\":%.2f,"
+                    "\"humidity\":%.2f,"
+                    "\"pressure\":%.2f"
+                    "}",
+                    m->bme280_readings.temperature,
+                    m->bme280_readings.humidity,
+                    m->bme280_readings.pressure
+                );
+
+                int msg_id = esp_mqtt_client_publish(
+                    ctx->mqtt_client,
+                    ctx->sensor_bme280_topic,
+                    payload,
+                    0,
+                    1,      /* QoS 1 */
+                    0       /* not retained */
+                );
+                ESP_LOGI(TAG, "Published sensor readings: %s (msg_id=%d)", payload, msg_id);
+            } break;
             // add more message types here if you need them
 
             default:

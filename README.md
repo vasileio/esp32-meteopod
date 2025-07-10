@@ -106,7 +106,7 @@ CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP=y
 
 Once the device is running, you can trigger an OTA update by publishing this MQTT message:
 
-- **Topic:** `meteopod/<DEVICE_MAC>/ota/update`
+- **Topic:** `meteopod/<DEVICE_MAC>/ota/cmd`
 - **Payload:** `update`
 
 The device will attempt to fetch the firmware from the configured URL and update itself.

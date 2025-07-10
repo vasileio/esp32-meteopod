@@ -5,6 +5,7 @@
 
 #include "sensors.h"
 #include "app_context.h"
+#include "mqtt.h"
 
 static const char *TAG = "SENSORS";
 
@@ -98,7 +99,10 @@ void sensors_task(void *pvParameters)
 {
     app_ctx_t *ctx = (app_ctx_t *)pvParameters;
     bme280_data_t bme280_data;
+    mqtt_queue_item_t   item;
     esp_err_t err;
+
+    item.type = MSG_SENSOR;
 
     /* Ensure sensors are initialized */
     sensors_init(pvParameters);
@@ -117,6 +121,14 @@ void sensors_task(void *pvParameters)
                 ctx->sensor_readings.bme280_readings.humidity   = bme280_data.humidity;
                 ctx->sensor_readings.bme280_readings.pressure   = bme280_data.pressure;
                 xSemaphoreGive(ctx->sensorDataMutex);
+                
+                /* Copy into our queue item */
+                item.data.sensor.bme280_readings = bme280_data;
+
+                /* Enqueue for the MQTT task to format & publish */
+                if (xQueueSend(ctx->mqttPublishQueue, &item, portMAX_DELAY) != pdTRUE) {
+                    ESP_LOGW(TAG, "MQTT metrics queue full, dropping heartbeat");
+                }
 
                 /* Log from the local buffer (no need to hold the lock while logging) */
                 ESP_LOGI(TAG, "Temperature: %.2f °C", bme280_data.temperature);

@@ -48,7 +48,7 @@ void system_monitor_task(void *pvParameters)
 
         // 4) Enqueue for the MQTT task to format & publish
         if (xQueueSend(ctx->mqttPublishQueue, &item, portMAX_DELAY) != pdTRUE) {
-            ESP_LOGW(TAG, "MQTT health queue full, dropping heartbeat");
+            ESP_LOGW(TAG, "MQTT metrics queue full, dropping heartbeat");
         }
 
         vTaskDelay(pdMS_TO_TICKS(10000));
