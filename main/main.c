@@ -44,14 +44,36 @@ void app_main(void)
         return;
     }
 
-    mqtt_build_all_topics(&ctx);
-
     const esp_app_desc_t *desc = esp_app_get_description();
     ESP_LOGI(TAG, "Firmware version: %s", desc->version);
 
     /* Queues & mutex */
     ctx.commandQueue    = xQueueCreate(10, sizeof(uart_event_t));
+
+    ctx.mqttPublishQueue = xQueueCreate( 10, sizeof(mqtt_queue_item_t));
+    configASSERT(ctx.mqttPublishQueue);
+    
+    ctx.mqttEventGroup = xEventGroupCreate();
+    configASSERT(ctx.mqttEventGroup);
+
     ctx.sensorDataMutex = xSemaphoreCreateMutex();
+
+    /* Build MQTT topics */
+    /* 1) Read raw MAC */
+    esp_read_mac(ctx.device_mac, ESP_MAC_WIFI_STA);
+
+    /* 2) Build MAC string (uppercase, no separators) */
+    snprintf(ctx.device_mac_str,
+             MAC_STR_LEN,
+             "%02X%02X%02X%02X%02X%02X",
+             ctx.device_mac[0],
+             ctx.device_mac[1],
+             ctx.device_mac[2],
+             ctx.device_mac[3],
+             ctx.device_mac[4],
+             ctx.device_mac[5]);
+    /* 3) Build the rest of the mqtt topics */
+     mqtt_build_all_topics(&ctx);
 
     /* Create tasks */
     xTaskCreate(watchdog_task,        "watchdog",     STACK_WATCHDOG_WORDS, &ctx, PRIO_WATCHDOG, &ctx.watchdogTaskHandle);

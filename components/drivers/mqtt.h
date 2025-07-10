@@ -48,7 +48,7 @@ typedef struct {
      */
     union {
         sensor_readings_t sensor; /**< Payload for MSG_SENSOR. */
-        system_metrics_t  health; /**< Payload for MSG_HEALTH. */
+        system_metrics_t  metrics; /**< Payload for MSG_HEALTH. */
         ota_status_t   ota;    /**< Payload for MSG_OTA. */
     } data;
 } mqtt_queue_item_t;
@@ -76,7 +76,7 @@ typedef struct
  *   - ctx->sensor_bme280_topic
  *   - ctx->sensor_sht31_topic
  *   - ctx->sensor_rainfall_topic
- *   - ctx->health_topic
+ *   - ctx->metrics_topic
  *   - ctx->ota_topic
  *   - ctx->ota_cmd_topic
  *   - ctx->ota_status_topic

@@ -4,6 +4,20 @@
 #include <esp_err.h>
 #include <stdio.h>
 #include <stddef.h>
+#include <time.h>
+#include <sys/time.h>  // gettimeofday()
+#include <string.h>
+
+/**
+ * @brief Get the current UTC time as an ISO-8601 string.
+ *
+ * Returns a pointer to a thread-safe, statically-allocated buffer
+ * of the form "YYYY-MM-DDThh:mm:ssZ". You must have an RTC or SNTP
+ * synchronized before calling this, otherwise it will all be zeros.
+ *
+ * @return Pointer to an NUL-terminated ISO-8601 timestamp.
+ */
+const char *now_iso8601(void);
 
 /**
  * @brief Build a full MQTT topic from a prefix and suffix.

@@ -64,7 +64,7 @@ typedef struct {
     char                        device_mac_str[MAC_STR_LEN];
     char                        topic_prefix[TOPIC_PREFIX_LEN];
     char                        sensor_topic[TOPIC_LEN];
-    char                        health_topic[TOPIC_LEN];
+    char                        metrics_topic[TOPIC_LEN];
     char                        ota_topic[TOPIC_LEN];
     char                        ota_cmd_topic[TOPIC_LEN];
     char                        ota_status_topic[TOPIC_LEN];
