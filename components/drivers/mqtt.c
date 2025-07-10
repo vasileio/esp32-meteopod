@@ -36,19 +36,19 @@ static const ha_sensor_config_t ha_sensors[] = {
 /**
  * Example MQTT discovery config payload built by this function:
  *
- * Topic: homeassistant/meteopod/XXYYZZ/sensor/bme280_temperature/config
+ * Topic: homeassistant/sensor/meteopod_XXYYZZ/bme280_temperature/config
  * Payload:
  * {
  *   "name": "BME280 Temperature",
  *   "state_topic": "meteopod/XXYYZZ/sensor/bme280",
  *   "unit_of_measurement": "°C",
  *   "value_template": "{{ value_json.temperature }}",
- *   "unique_id": "meteopod_bme280_temperature",
+ *   "unique_id": "bme280_temperature_XXYYZZ",
  *   "device_class": "temperature",
  *   "device": {
- *     "identifiers": ["esp32-meteopod-XXYYZZ"],
- *     "name": "ESP32 Meteopod",
- *     "model": "ESP32 Meteopod 1.2.3",
+ *     "identifiers": "esp32-meteopod-XXYYZZ",
+ *     "name": "Meteopod Dev - Study",
+ *     "model": "Meteopod v0.0.3",
  *     "manufacturer": "vasileio"
  *   }
  * }
@@ -67,10 +67,14 @@ static void publish_HA_discovery_config(esp_mqtt_client_handle_t client,
 {
     char topic[192];
     char payload[512];
+    char unique_id[96];
 
-    // e.g. homeassistant/meteopod/XXYYZZ/sensor/bme280_temperature/config
+    // Unique ID now includes MAC to prevent collision across devices
+    snprintf(unique_id, sizeof(unique_id), "%s_%s", suffix, mac_str);
+
+    // e.g. homeassistant/sensor/meteopod_XXYYZZ/bme280_temperature/config
     snprintf(topic, sizeof(topic),
-            "homeassistant/sensor/meteopod_%s/%s/config", mac_str, suffix);
+             "homeassistant/sensor/meteopod_%s/%s/config", mac_str, suffix);
 
     cJSON *root = cJSON_CreateObject();
 
@@ -78,7 +82,7 @@ static void publish_HA_discovery_config(esp_mqtt_client_handle_t client,
     cJSON_AddStringToObject(root, "state_topic", sensor_topic);
     cJSON_AddStringToObject(root, "unit_of_measurement", unit);
     cJSON_AddStringToObject(root, "value_template", value_template);
-    cJSON_AddStringToObject(root, "unique_id", suffix);
+    cJSON_AddStringToObject(root, "unique_id", unique_id);  // <-- patched
     if (device_class) {
         cJSON_AddStringToObject(root, "device_class", device_class);
     }
@@ -101,6 +105,26 @@ static void publish_HA_discovery_config(esp_mqtt_client_handle_t client,
 }
 
 /**
+ * @brief Clear all retained MQTT discovery topics for Home Assistant.
+ *
+ * Publishes empty retained messages to each known discovery config topic.
+ */
+static void clear_HA_discovery_configs(esp_mqtt_client_handle_t client, const char *mac)
+{
+    char topic[192];
+
+    for (size_t i = 0; i < ARRAY_SIZE(ha_sensors); ++i) {
+        snprintf(topic, sizeof(topic),
+                 "homeassistant/sensor/meteopod_%s/%s/config",
+                 mac, ha_sensors[i].suffix);
+
+        esp_mqtt_client_publish(client, topic, "", 0, 1, true);
+        ESP_LOGI(TAG, "Cleared discovery topic: %s", topic);
+    }
+}
+
+
+/**
  * @brief Publish MQTT discovery configuration for all known sensors to Home Assistant.
  *
  * This function constructs discovery topics and JSON payloads for all defined sensors,
@@ -114,6 +138,9 @@ static void publish_all_discovery_configs(esp_mqtt_client_handle_t client, app_c
     const char *mac = ctx->device_mac_str;
     char device_id[64];
     snprintf(device_id, sizeof(device_id), "esp32-meteopod-%s", mac);
+
+    /* Clear any stale discovery configs first */
+    clear_HA_discovery_configs(client, mac);
 
     ha_sensor_config_t sensors[ARRAY_SIZE(ha_sensors)];
     memcpy(sensors, ha_sensors, sizeof(ha_sensors));
