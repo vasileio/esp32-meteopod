@@ -25,11 +25,11 @@ static inline void wipe_payload(char *buf, size_t buf_size)
 
 /** @brief List of all Home Assistant-exposed sensors. */
 static const ha_sensor_config_t ha_sensors[] = {
-    { "bme280_temperature", "BME280 Temperature", "°C",  "{{ value_json.temperature }}", "temperature", NULL },
-    { "bme280_humidity",    "BME280 Humidity",    "%",   "{{ value_json.humidity }}",    "humidity",    NULL },
-    { "bme280_pressure",    "BME280 Pressure",    "hPa", "{{ value_json.pressure }}",    "pressure",    NULL },
-    { "sht31_temperature",  "SHT31 Temperature",  "°C",  "{{ value_json.temperature }}", "temperature", NULL },
-    { "sht31_humidity",     "SHT31 Humidity",     "%",   "{{ value_json.humidity }}",    "humidity",    NULL }
+    { "bme280_temperature",     "Case Temperature",         "°C",  "{{ value_json.temperature }}", "temperature", "diagnostic", NULL },
+    { "bme280_humidity",        "Case Humidity",            "%",   "{{ value_json.humidity }}",    "humidity",    "diagnostic", NULL },
+    { "bme280_pressure",        "Atmospheric Pressure",     "hPa", "{{ value_json.pressure }}",    "pressure",    NULL,         NULL },
+    { "sht31_temperature",      "Temperature",              "°C",  "{{ value_json.temperature }}", "temperature", NULL,         NULL },
+    { "sht31_humidity",         "Humidity",                 "%",   "{{ value_json.humidity }}",    "humidity",    NULL,         NULL }
 };
 
 
@@ -61,6 +61,7 @@ static void publish_HA_discovery_config(esp_mqtt_client_handle_t client,
                                         const char *unit,
                                         const char *value_template,
                                         const char *device_class,
+                                        const char *entity_category,
                                         const char *sensor_topic,
                                         const char *device_id,
                                         const char *device_name)
@@ -85,6 +86,10 @@ static void publish_HA_discovery_config(esp_mqtt_client_handle_t client,
     cJSON_AddStringToObject(root, "unique_id", unique_id);  // <-- patched
     if (device_class) {
         cJSON_AddStringToObject(root, "device_class", device_class);
+    }
+
+    if (entity_category) {
+        cJSON_AddStringToObject(root, "entity_category", entity_category);
     }
 
     cJSON *device = cJSON_CreateObject();
@@ -163,6 +168,7 @@ static void publish_all_discovery_configs(esp_mqtt_client_handle_t client, app_c
                                     sensors[i].unit,
                                     sensors[i].value_template,
                                     sensors[i].device_class,
+                                    sensors[i].entity_category,
                                     sensors[i].sensor_topic,
                                     device_id,
                                     "ESP32 Meteopod");
