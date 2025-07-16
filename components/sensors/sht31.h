@@ -47,7 +47,7 @@ typedef struct {
 #define SHT31_MAX_TRIES                    3
 
 /**
- * @brief Initialize SHT31 sensor
+ * @brief initialise SHT31 sensor
  *
  * @param h       Handle to sht31_handle_t
  * @param port    I2C port (e.g. I2C_NUM_0)
@@ -58,7 +58,7 @@ typedef struct {
 esp_err_t sht31_init(sht31_handle_t *h, i2c_port_t port, uint8_t addr);
 
 /**
- * @brief Deinitialize SHT31 sensor
+ * @brief Deinitialise SHT31 sensor
  *
  * @param h       Handle to sht31_handle_t
  *

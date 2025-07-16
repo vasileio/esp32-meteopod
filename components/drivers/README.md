@@ -17,10 +17,10 @@ This guide will walk you through all the steps required to integrate a new senso
 
    ```c
    typedef struct {
-       bme280_data_t  bme280_readings;
-       sht31_data_t   sht31_readings;
-       float         dht22_temperature;
-       float         dht22_humidity;
+       bme280_data_t    bme280_readings;
+       sht31_data_t     sht31_readings;
+       float            dht22_temperature;
+       float            dht22_humidity;
    } sensor_readings_t;
    ```
 

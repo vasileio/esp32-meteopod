@@ -33,7 +33,7 @@ typedef struct {
 } DFRobot_rainfall_sensor_t;
 
 /**
- * @brief  Initialize sensor over I²C
+ * @brief  initialise sensor over I²C
  * @param  sensor:      pointer to handle
  * @param  bus:         already-configured I2C bus handle
  * @param  addr_7bit:   7-bit sensor address (default 0x1D)

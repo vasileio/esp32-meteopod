@@ -164,7 +164,7 @@ static const char *get_topic_for_suffix(const char *suffix, app_ctx_t *ctx) {
  * This function constructs discovery topics and JSON payloads for all defined sensors,
  * assigning the correct sensor topic based on the suffix, and publishes them with retain=true.
  *
- * @param[in] client     Handle to the initialized MQTT client
+ * @param[in] client     Handle to the initialised MQTT client
  * @param[in] ctx        Application context with MQTT topic strings and MAC address
  */
 static void publish_all_discovery_configs(esp_mqtt_client_handle_t client, app_ctx_t *ctx)
@@ -386,7 +386,7 @@ static void mqtt_event_handler(void *arg,
             break;
 
         case MQTT_EVENT_BEFORE_CONNECT:
-            ESP_LOGI(TAG, "MQTT client initialized; about to connect to %s", CONFIG_MQTT_BROKER_URI);
+            ESP_LOGI(TAG, "MQTT client initialised; about to connect to %s", CONFIG_MQTT_BROKER_URI);
             break;
 
         default:

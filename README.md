@@ -18,7 +18,7 @@ idf.py build
 idf.py flash monitor
 ```
 
-Ensure the ESP-IDF environment is initialized with:
+Ensure the ESP-IDF environment is initialised with:
 
 ```bash
 . $IDF_PATH/export.sh
