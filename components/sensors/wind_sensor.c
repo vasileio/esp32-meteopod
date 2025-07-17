@@ -2,8 +2,9 @@
  * @file wind_sensor.c
  * @brief Wind direction sensor driver using analog voltage via ADC
  *
- * Reads voltage from ADC, converts to current (mA) using shunt resistor,
- * and optionally applies a linear calibration mapping.
+ * This driver reads an analog signal from a wind direction sensor,
+ * converts the ADC voltage to current (assuming a shunt resistor),
+ * applies a linear calibration, and maps the result to a wind direction.
  */
 
 #include "wind_sensor.h"
@@ -12,37 +13,42 @@
 #include "esp_adc/adc_oneshot.h"
 #include "freertos/FreeRTOS.h"
 
-
 #define TAG "WIND"
 
+/* ADC configuration constants */
 #define WIND_SENSOR_DIRECTION_ADC_UNIT     ADC_UNIT_1
-#define WIND_SENSOR_DIRECTION_ADC_CHANNEL  ADC_CHANNEL_6  // GPIO34
+#define WIND_SENSOR_DIRECTION_ADC_CHANNEL  ADC_CHANNEL_6  /* GPIO34 */
 #define WIND_SENSOR_DIRECTION_ATTEN        ADC_ATTEN_DB_12
 #define WIND_SENSOR_DIRECTION_VREF         3.3f
 #define WIND_SENSOR_DIRECTION_ADC_RES      4095.0f
 
-#define R_SHUNT_OHMS             100.0f
-#define RAW_MIN_VOLTAGE          0.4f
-#define RAW_MAX_VOLTAGE          2.0f
-#define CAL_MIN_CURRENT_MA       4.0f
-#define CAL_MAX_CURRENT_MA       20.0f
-
 #define NUM_SAMPLES              16
 
-static const char *wind_direction_from_mA(float mA)
+/**
+ * Convert sensor current in mV to wind direction as a string.
+ *
+ * @param mV Sensor output current in mV.
+ * @return Pointer to wind direction string.
+ */
+static const char *wind_direction_from_mV(float mV)
 {
-    if (mA < 5.0f) return "N";
-    if (mA < 7.4f) return "NE";
-    if (mA < 10.0f) return "E";
-    if (mA < 12.5f) return "SE";
-    if (mA < 14.8f) return "S";
-    if (mA < 16.9f) return "SW";
-    if (mA < 19.0f) return "W";
+    if (mV < 560.0f) return "N";
+    if (mV < 830.0f) return "NE";
+    if (mV < 1100.0f) return "E";
+    if (mV < 1350.0f) return "SE";
+    if (mV < 1700.0f) return "S";
+    if (mV < 2000.0f) return "SW";
+    if (mV < 2400.0f) return "W";
     return "NW";
 }
 
 static adc_oneshot_unit_handle_t adc_handle;
 
+/**
+ * Initialize the ADC used for reading the wind direction sensor.
+ *
+ * @return ESP_OK on success or an error code on failure.
+ */
 esp_err_t wind_sensor_direction_init(void)
 {
     adc_oneshot_unit_init_cfg_t unit_cfg = {
@@ -64,11 +70,20 @@ esp_err_t wind_sensor_direction_init(void)
     return ESP_OK;
 }
 
+/**
+ * Read the wind direction from the sensor.
+ *
+ * This function averages multiple ADC samples, a wind direction string.
+ *
+ * @param wind_dir Output pointer to wind direction string.
+ * @return ESP_OK on success or an error code on failure.
+ */
 esp_err_t wind_sensor_direction_read(const char **wind_dir)
 {
     int total = 0;
     esp_err_t err = ESP_OK;
 
+    /* Average multiple ADC readings for noise reduction */
     for (int i = 0; i < NUM_SAMPLES; ++i) {
         int sample = 0;
         esp_err_t err = adc_oneshot_read(adc_handle, WIND_SENSOR_DIRECTION_ADC_CHANNEL, &sample);
@@ -77,24 +92,23 @@ esp_err_t wind_sensor_direction_read(const char **wind_dir)
             return err;
         }
         total += sample;
-        vTaskDelay(pdMS_TO_TICKS(2));  // small delay between samples
+        vTaskDelay(pdMS_TO_TICKS(2));  /* Small delay between samples */
     }
 
     float avg_raw = total / (float)NUM_SAMPLES;
+
+    /* Convert raw ADC value to voltage and apply offset */
     float voltage = (avg_raw / WIND_SENSOR_DIRECTION_ADC_RES) * WIND_SENSOR_DIRECTION_VREF;
-    float current_mA = (voltage / R_SHUNT_OHMS) * 1000.0f;
+    voltage += CONFIG_WIND_DIRECTION_SENSOR_VOLTAGE_OFFSET_MV / 1000.0f;
 
-    float calibrated_mA = current_mA;
-    if (voltage >= RAW_MIN_VOLTAGE && voltage <= RAW_MAX_VOLTAGE) {
-        float slope = (CAL_MAX_CURRENT_MA - CAL_MIN_CURRENT_MA) /
-                      (RAW_MAX_VOLTAGE - RAW_MIN_VOLTAGE);
-        calibrated_mA = CAL_MIN_CURRENT_MA + slope * (voltage - RAW_MIN_VOLTAGE);
-    }
+    /* Convert to mV */
+    float voltage_mV = voltage * 1000.0f;
 
-    *wind_dir = wind_direction_from_mA(calibrated_mA);
+    /* Determine wind direction from calibrated current */
+    *wind_dir = wind_direction_from_mV(voltage_mV);
 
-    ESP_LOGI(TAG, "ADC avg: %.1f | V = %.3f V | I = %.2f mA | Calibrated = %.2f mA | Direction: %s",
-             avg_raw, voltage, current_mA, calibrated_mA, *wind_dir);
+    ESP_LOGI(TAG, "ADC avg: %.1f | V = %.3f V | Direction: %s",
+             avg_raw, voltage, *wind_dir);
 
     return err;
 }
