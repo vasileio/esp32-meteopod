@@ -16,6 +16,7 @@
 #include "dfrobot_rainfall_sensor.h"
 #include "sht31.h"
 #include "bme280.h"
+#include "bh1750.h"   
 
 /* MQTT */
 // #include "mqtt.h"
@@ -37,6 +38,7 @@ typedef struct {
     i2c_master_bus_handle_t     i2c_bus;
     DFRobot_rainfall_sensor_t   rain_sensor;
     sht31_handle_t              sh31_sensor;
+    bh1750_handle_t             bh1750_sensor;
 
     /* Queues */
     QueueHandle_t               sensorDataQueue;
@@ -75,6 +77,7 @@ typedef struct {
     char                        sensor_sht31_topic[TOPIC_LEN];
     char                        sensor_rainfall_topic[TOPIC_LEN];
     char                        sensor_wind_topic[TOPIC_LEN];
+    char                        sensor_light_topic[TOPIC_LEN];
 } app_ctx_t;
 
 

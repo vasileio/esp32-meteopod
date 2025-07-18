@@ -6,6 +6,7 @@
 #include "sensors.h"
 #include "app_context.h"
 #include "mqtt.h"
+#include "bh1750.h"
 
 static const char *TAG = "SENSORS";
 
@@ -98,7 +99,7 @@ void sensors_init(void *pvParameters)
 {
     esp_err_t ret;
 
-    // app_ctx_t *ctx = (app_ctx_t *)pvParameters;  
+    app_ctx_t *ctx = (app_ctx_t *)pvParameters;  
 
     /* initialise BME280 temperature/humidity/pressure sensor */
     ret = bme280_component_init(pvParameters);
@@ -122,6 +123,15 @@ void sensors_init(void *pvParameters)
         ESP_LOGI(TAG, "Wind sensor initialised");
     }
 
+    ret = bh1750_init(&ctx->bh1750_sensor, I2C_PORT, BH1750_I2C_ADDR);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Light sensor init failed: %s", esp_err_to_name(ret));
+    } else {
+        ESP_LOGI(TAG, "Light sensor initialised");
+        bh1750_set_mode(&ctx->bh1750_sensor, CONTINUOUS_HIGH_RES_MODE);
+    }
+    
+
 
 
     /* TODO: Add initialization for additional sensors here */
@@ -133,6 +143,7 @@ void sensors_task(void *pvParameters)
     bme280_data_t           bme280_data;
     sht31_data_t            sht31_data;
     wind_data_t             wind_data;
+    float                   light_lux;
     mqtt_queue_item_t       item;
     esp_err_t               err;
 
@@ -207,6 +218,24 @@ void sensors_task(void *pvParameters)
 
                 ESP_LOGI(TAG, "[WIND] Direction: %s", wind_data.direction);
                 ESP_LOGI(TAG, "[WIND] Speed: %.1f m/s", wind_data.speed);
+            }
+    }
+
+        err = bh1750_read_light(&ctx->bh1750_sensor, &light_lux);
+        if (err != ESP_OK) {
+            ESP_LOGW(TAG, "BH1750 read error (continuing): %s", esp_err_to_name(err));
+        } else {
+
+            /* Acquire mutex before updating shared context */
+            if (xSemaphoreTake(ctx->sensorDataMutex, portMAX_DELAY) == pdTRUE)
+            {
+                ctx->sensor_readings.light_lux = light_lux;
+                xSemaphoreGive(ctx->sensorDataMutex);
+
+                /* Copy into our queue item */
+                item.data.sensor.light_lux = light_lux;
+
+                ESP_LOGI(TAG, "[LIGHT] Ambient light: %.0f", light_lux);
             }
     }
 
