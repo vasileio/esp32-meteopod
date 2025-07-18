@@ -134,11 +134,11 @@ typedef struct {
     bme280_calib_data_t      calib;
     int32_t                  t_fine;
     SemaphoreHandle_t        mutex;
-    bool                     initialized;
+    bool                     initialised;
 } bme280_handle_t;
 
 /**
- * @brief Initialize the BME280 sensor.
+ * @brief initialise the BME280 sensor.
  */
 esp_err_t bme280_init(bme280_handle_t *handle,
                       i2c_port_t        i2c_port,
@@ -146,7 +146,7 @@ esp_err_t bme280_init(bme280_handle_t *handle,
                       const bme280_config_t *config);
 
 /**
- * @brief Deinitialize the sensor and release resources.
+ * @brief Deinitialise the sensor and release resources.
  */
 esp_err_t bme280_deinit(bme280_handle_t *handle);
 

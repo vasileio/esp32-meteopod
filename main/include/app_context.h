@@ -74,6 +74,7 @@ typedef struct {
     char                        sensor_bme280_topic[TOPIC_LEN];
     char                        sensor_sht31_topic[TOPIC_LEN];
     char                        sensor_rainfall_topic[TOPIC_LEN];
+    char                        sensor_wind_topic[TOPIC_LEN];
 } app_ctx_t;
 
 

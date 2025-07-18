@@ -1,0 +1,19 @@
+menu "Wind Sensor Configuration"
+
+config WIND_DIRECTION_SENSOR_VOLTAGE_OFFSET_MV
+    int "Voltage offset for wind direction sensor (in mV)"
+    default 0
+    range -500 500
+    help
+      Apply this offset to the ADC voltage reading to account for calibration drift
+      or hardware-level bias.
+
+config WIND_SPEED_SENSOR_VOLTAGE_OFFSET_MV
+    int "Voltage offset for wind speed sensor (in mV)"
+    default 0
+    range -500 500
+    help
+      Apply this offset to the ADC voltage reading to account for calibration drift
+      or hardware-level bias.
+
+endmenu

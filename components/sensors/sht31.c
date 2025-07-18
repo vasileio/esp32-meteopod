@@ -40,7 +40,7 @@ static uint8_t sht31_crc8(const uint8_t *data, int len)
 }
 
 /**
- * @brief Initialize the SHT31 sensor
+ * @brief initialise the SHT31 sensor
  *
  * @param h Handle to sht31_handle_t
  * @param port I2C port number (e.g. I2C_NUM_0)
@@ -80,7 +80,7 @@ esp_err_t sht31_init(sht31_handle_t *h, i2c_port_t port, uint8_t addr)
 }
 
 /**
- * @brief Deinitialize the SHT31 sensor
+ * @brief Deinitialise the SHT31 sensor
  *
  * @param h Handle to sht31_handle_t
  *

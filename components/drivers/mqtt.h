@@ -98,7 +98,7 @@ typedef struct
  *   - ctx->ota_status_topic
  *
  * @param[in,out] ctx  Pointer to the application context; must have
- *                     ctx->topic_prefix already initialized.
+ *                     ctx->topic_prefix already initialised.
  * @return
  *   - ESP_OK if all topics were built successfully.
  *   - ESP_ERR_INVALID_ARG if any pointer is NULL or buffer lengths are zero.
@@ -109,7 +109,7 @@ esp_err_t mqtt_build_all_topics(app_ctx_t *ctx);
 /**
  * @brief MQTT processing task
  *
- * Initializes MQTT client, registers event handler, and continuously
+ * initialises MQTT client, registers event handler, and continuously
  * processes publish requests from the queue. Waits for connection before
  * publishing.
  *

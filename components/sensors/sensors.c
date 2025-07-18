@@ -12,7 +12,7 @@ static const char *TAG = "SENSORS";
 static bme280_handle_t bme_handle;  // static so it lives forever
 
 /**
- * @brief Initialize SHT31 sensor
+ * @brief initialise SHT31 sensor
  */
 static esp_err_t sht31_component_init(void *pvParameters) {
 
@@ -24,12 +24,12 @@ static esp_err_t sht31_component_init(void *pvParameters) {
         return ret;
     }
     
-    ESP_LOGI(TAG, "SHT31 sensor initialized successfully");
+    ESP_LOGI(TAG, "SHT31 sensor initialised successfully");
     return ESP_OK;
 }
 
 /**
- * @brief Initialize BME280 sensor
+ * @brief initialise BME280 sensor
  */
 static esp_err_t bme280_component_init(void *pvParameters) {
 
@@ -52,7 +52,7 @@ static esp_err_t bme280_component_init(void *pvParameters) {
         return ret;
     }
     
-    ESP_LOGI(TAG, "BME280 sensor initialized successfully");
+    ESP_LOGI(TAG, "BME280 sensor initialised successfully");
     return ESP_OK;
 }
 
@@ -100,19 +100,26 @@ void sensors_init(void *pvParameters)
 
     // app_ctx_t *ctx = (app_ctx_t *)pvParameters;  
 
-    /* Initialize BME280 temperature/humidity/pressure sensor */
+    /* initialise BME280 temperature/humidity/pressure sensor */
     ret = bme280_component_init(pvParameters);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "BME280 init failed: %s", esp_err_to_name(ret));
     } else {
-        ESP_LOGI(TAG, "BME280 initialized");
+        ESP_LOGI(TAG, "BME280 initialised");
     }
 
     ret = sht31_component_init(pvParameters);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "SHT31 init failed: %s", esp_err_to_name(ret));
     } else {
-        ESP_LOGI(TAG, "SHT31 initialized");
+        ESP_LOGI(TAG, "SHT31 initialised");
+    }
+
+    ret = wind_sensor_init();
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Wind sensor init failed: %s", esp_err_to_name(ret));
+    } else {
+        ESP_LOGI(TAG, "Wind sensor initialised");
     }
 
 
@@ -125,12 +132,13 @@ void sensors_task(void *pvParameters)
     app_ctx_t *ctx =        (app_ctx_t *)pvParameters;
     bme280_data_t           bme280_data;
     sht31_data_t            sht31_data;
+    wind_data_t             wind_data;
     mqtt_queue_item_t       item;
     esp_err_t               err;
 
     item.type = MSG_SENSOR;
 
-    /* Ensure sensors are initialized */
+    /* Ensure sensors are initialised */
     sensors_init(pvParameters);
 
     while (1) {
@@ -142,7 +150,8 @@ void sensors_task(void *pvParameters)
             ESP_LOGW(TAG, "BME280 read error (continuing): %s", esp_err_to_name(err));
         } else {
             /* Acquire mutex before updating shared context */
-            if (xSemaphoreTake(ctx->sensorDataMutex, portMAX_DELAY) == pdTRUE) {
+            if (xSemaphoreTake(ctx->sensorDataMutex, portMAX_DELAY) == pdTRUE)
+            {
                 ctx->sensor_readings.bme280_readings.temperature = bme280_data.temperature;
                 ctx->sensor_readings.bme280_readings.humidity   = bme280_data.humidity;
                 ctx->sensor_readings.bme280_readings.pressure   = bme280_data.pressure;
@@ -167,7 +176,8 @@ void sensors_task(void *pvParameters)
         } else {
 
             /* Acquire mutex before updating shared context */
-            if (xSemaphoreTake(ctx->sensorDataMutex, portMAX_DELAY) == pdTRUE) {
+            if (xSemaphoreTake(ctx->sensorDataMutex, portMAX_DELAY) == pdTRUE) 
+            {
                 ctx->sensor_readings.sht31_readings.temperature = sht31_data.temperature;
                 ctx->sensor_readings.sht31_readings.humidity   =    sht31_data.humidity;
                 xSemaphoreGive(ctx->sensorDataMutex);
@@ -177,7 +187,27 @@ void sensors_task(void *pvParameters)
 
                 ESP_LOGI(TAG, "[SHT31] Temperature: %.2f °C", sht31_data.temperature);
                 ESP_LOGI(TAG, "[SHT31] Humidity:    %.2f %%RH", sht31_data.humidity);
-        }
+            }
+    }
+
+        err = wind_sensor_read(&wind_data);
+        if (err != ESP_OK) {
+            ESP_LOGW(TAG, "SHT31 read error (continuing): %s", esp_err_to_name(err));
+        } else {
+
+            /* Acquire mutex before updating shared context */
+            if (xSemaphoreTake(ctx->sensorDataMutex, portMAX_DELAY) == pdTRUE)
+            {
+                ctx->sensor_readings.wind_readings.direction = wind_data.direction;
+                ctx->sensor_readings.wind_readings.speed = wind_data.speed;
+                xSemaphoreGive(ctx->sensorDataMutex);
+
+                /* Copy into our queue item */
+                item.data.sensor.wind_readings = wind_data;
+
+                ESP_LOGI(TAG, "[WIND] Direction: %s", wind_data.direction);
+                ESP_LOGI(TAG, "[WIND] Speed: %.1f m/s", wind_data.speed);
+            }
     }
 
     /* Enqueue for the MQTT task to format & publish */

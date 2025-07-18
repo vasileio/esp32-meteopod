@@ -225,19 +225,19 @@ esp_err_t bme280_init(bme280_handle_t *h, i2c_port_t port, uint8_t addr, const b
     // Apply user configuration
     ESP_ERROR_CHECK(write_configuration(h));
 
-    h->initialized = true;
+    h->initialised = true;
 
     return ESP_OK;
 }
 
 esp_err_t bme280_deinit(bme280_handle_t *h)
 {
-    ESP_RETURN_ON_FALSE(h && h->initialized, ESP_ERR_INVALID_STATE, TAG, "not initialized");
+    ESP_RETURN_ON_FALSE(h && h->initialised, ESP_ERR_INVALID_STATE, TAG, "not initialised");
 
     ESP_ERROR_CHECK(i2c_master_bus_rm_device(h->dev));
 
     vSemaphoreDelete(h->mutex);
-    h->initialized = false;
+    h->initialised = false;
 
     return ESP_OK;
 }
@@ -253,7 +253,7 @@ esp_err_t bme280_configure(bme280_handle_t *h, const bme280_config_t *cfg)
 
 esp_err_t bme280_trigger_measurement(bme280_handle_t *h)
 {
-    ESP_RETURN_ON_FALSE(h && h->initialized, ESP_ERR_INVALID_STATE, TAG, "not initialized");
+    ESP_RETURN_ON_FALSE(h && h->initialised, ESP_ERR_INVALID_STATE, TAG, "not initialised");
 
     return write_configuration(h);
 }

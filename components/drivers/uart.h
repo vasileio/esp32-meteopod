@@ -7,7 +7,7 @@
 #define UART_TX_PIN          17
 
 /**
- * @brief       Initialize UART for receiving commands.
+ * @brief       initialise UART for receiving commands.
  *
  * This function configures the UART peripheral with the specified
  * parameters (baud rate, data bits, parity, stop bits, and flow control),
