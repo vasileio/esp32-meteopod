@@ -42,7 +42,8 @@ static const ha_sensor_config_t ha_sensors[] = {
     { "sht31_temperature",      "Temperature",              "°C",  "{{ value_json.temperature }}",      "temperature",      NULL,         NULL },
     { "sht31_humidity",         "Humidity",                 "%",   "{{ value_json.humidity }}",         "humidity",         NULL,         NULL },
     { "wind_direction",         "Wind Direction",           NULL,  "{{ value_json.direction }}",        NULL,               NULL,         NULL },
-    { "wind_speed",             "Wind Speed",               "m/s", "{{ value_json.speed }}",            "wind_speed",            NULL,         NULL }
+    { "wind_speed",             "Wind Speed",               "m/s", "{{ value_json.speed }}",            "wind_speed",       NULL,         NULL },
+    { "light",                  "Illuminance",              "lx",   "{{ value_json.illuminance }}",     "illuminance",      NULL,         NULL }
 };
 
 
@@ -159,6 +160,10 @@ static const char *get_topic_for_suffix(const char *suffix, app_ctx_t *ctx) {
     // Wind sensors all start with "wind"
     if (strncmp(suffix, "wind", 4) == 0) {
         return ctx->sensor_wind_topic;
+    }
+    // illuminance sensors all start with "light"
+    if (strncmp(suffix, "light", 5) == 0) {
+        return ctx->sensor_light_topic;
     }
     // Everything else on the single "metrics" topic
     if (strcmp(suffix, "metrics")   == 0 ||
@@ -279,6 +284,15 @@ esp_err_t mqtt_build_all_topics(app_ctx_t *ctx)
                             sizeof(ctx->sensor_wind_topic));
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to build wind topic: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    err = utils_build_topic(ctx->sensor_topic,
+                            "light",
+                            ctx->sensor_light_topic,
+                            sizeof(ctx->sensor_light_topic));
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to build light topic: %s", esp_err_to_name(err));
         return err;
     }
 
@@ -557,6 +571,22 @@ void mqtt_task(void *pvParameters)
                 );
                 ESP_LOGI(TAG, "Published wind sensor readings: %s (msg_id=%d)", payload, msg_id);
 
+                /* Light */
+                wipe_payload(payload, sizeof(payload));
+                snprintf(payload, sizeof(payload),
+                    "{\"illuminance\":%.0f"
+                    "}",
+                    m->light_lux);
+
+                msg_id = esp_mqtt_client_publish(
+                    ctx->mqtt_client,
+                    ctx->sensor_light_topic,
+                    payload,
+                    0,
+                    1,      /* QoS 1 */
+                    0       /* not retained */
+                );
+                ESP_LOGI(TAG, "Published light sensor readings: %s (msg_id=%d)", payload, msg_id);
             } break;
             // add more message types here if you need them
 
