@@ -199,9 +199,14 @@ void sensors_task(void *pvParameters)
             if (xSemaphoreTake(ctx->sensorDataMutex, portMAX_DELAY) == pdTRUE)
             {
                 ctx->sensor_readings.wind_readings.direction = wind_data.direction;
+                ctx->sensor_readings.wind_readings.speed = wind_data.speed;
                 xSemaphoreGive(ctx->sensorDataMutex);
 
-                ESP_LOGI(TAG, "[WIND] Direction: %s, Speed: %.1f m/s", wind_data.direction, wind_data.speed);
+                /* Copy into our queue item */
+                item.data.sensor.wind_readings = wind_data;
+
+                ESP_LOGI(TAG, "[WIND] Direction: %s", wind_data.direction);
+                ESP_LOGI(TAG, "[WIND] Speed: %.1f m/s", wind_data.speed);
             }
     }
 

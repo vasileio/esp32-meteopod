@@ -23,16 +23,26 @@ static inline void wipe_payload(char *buf, size_t buf_size)
     }
 }
 
-/** @brief List of all Home Assistant-exposed sensors. */
+/** @brief List of all Home Assistant-exposed sensors. 
+ *  suffix;                     Unique sensor suffix used in the discovery topic and unique_id
+ *  name;                       Friendly name of the sensor in Home Assistant
+ *  unit;                       Unit of measurement (e.g., °C, %, hPa)
+ *  value_template;             Home Assistant Jinja template to extract value from JSON payload
+ *  device_class;               Device class (temperature, humidity, etc.)
+ *  entity_category;            When set to "diagnostic" it will show up in the respective area in HA
+ *  sensor_topic;               Fully qualified MQTT topic for publishing sensor data
+ */
 static const ha_sensor_config_t ha_sensors[] = {
-    { "metrics",                "Uptime",                   "ms",  "{{ value_json.uptime_ms }}",    "duration",         "diagnostic", NULL },
-    { "rssi",                   "Wi-Fi RSSI",               "dBm", "{{ value_json.rssi }}",         "signal_strength",  "diagnostic", NULL },
-    { "ip_address",             "IP Address",               NULL,    "{{ value_json.ip_address }}",   NULL,               "diagnostic", NULL },
-    { "bme280_temperature",     "Case Temperature",         "°C",  "{{ value_json.temperature }}",  "temperature",      "diagnostic", NULL },
-    { "bme280_humidity",        "Case Humidity",            "%",   "{{ value_json.humidity }}",     "humidity",         "diagnostic", NULL },
-    { "bme280_pressure",        "Atmospheric Pressure",     "hPa", "{{ value_json.pressure }}",     "pressure",         NULL,         NULL },
-    { "sht31_temperature",      "Temperature",              "°C",  "{{ value_json.temperature }}",  "temperature",      NULL,         NULL },
-    { "sht31_humidity",         "Humidity",                 "%",   "{{ value_json.humidity }}",     "humidity",         NULL,         NULL }
+    { "metrics",                "Uptime",                   "ms",  "{{ value_json.uptime_ms }}",        "duration",         "diagnostic", NULL },
+    { "rssi",                   "Wi-Fi RSSI",               "dBm", "{{ value_json.rssi }}",             "signal_strength",  "diagnostic", NULL },
+    { "ip_address",             "IP Address",               NULL,    "{{ value_json.ip_address }}",     NULL,               "diagnostic", NULL },
+    { "bme280_temperature",     "Case Temperature",         "°C",  "{{ value_json.temperature }}",      "temperature",      "diagnostic", NULL },
+    { "bme280_humidity",        "Case Humidity",            "%",   "{{ value_json.humidity }}",         "humidity",         "diagnostic", NULL },
+    { "bme280_pressure",        "Atmospheric Pressure",     "hPa", "{{ value_json.pressure }}",         "pressure",         NULL,         NULL },
+    { "sht31_temperature",      "Temperature",              "°C",  "{{ value_json.temperature }}",      "temperature",      NULL,         NULL },
+    { "sht31_humidity",         "Humidity",                 "%",   "{{ value_json.humidity }}",         "humidity",         NULL,         NULL },
+    { "wind_direction",         "Wind Direction",           NULL,  "{{ value_json.direction }}",        NULL,               NULL,         NULL },
+    { "wind_speed",             "Wind Speed",               "m/s", "{{ value_json.speed }}",            "speed",            NULL,         NULL }
 };
 
 
@@ -146,6 +156,10 @@ static const char *get_topic_for_suffix(const char *suffix, app_ctx_t *ctx) {
     if (strncmp(suffix, "sht31", 5) == 0) {
         return ctx->sensor_sht31_topic;
     }
+    // Wind sensors all start with "wind"
+    if (strncmp(suffix, "wind", 4) == 0) {
+        return ctx->sensor_wind_topic;
+    }
     // Everything else on the single "metrics" topic
     if (strcmp(suffix, "metrics")   == 0 ||
         strcmp(suffix, "rssi")      == 0 ||
@@ -256,6 +270,15 @@ esp_err_t mqtt_build_all_topics(app_ctx_t *ctx)
                             sizeof(ctx->sensor_rainfall_topic));
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to build rainfall topic: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    err = utils_build_topic(ctx->sensor_topic,
+                            "wind",
+                            ctx->sensor_wind_topic,
+                            sizeof(ctx->sensor_wind_topic));
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to build wind topic: %s", esp_err_to_name(err));
         return err;
     }
 
@@ -514,6 +537,26 @@ void mqtt_task(void *pvParameters)
                     0       /* not retained */
                 );
                 ESP_LOGI(TAG, "Published SHT31 sensor readings: %s (msg_id=%d)", payload, msg_id);
+
+                /* Wind */
+                wipe_payload(payload, sizeof(payload));
+                snprintf(payload, sizeof(payload),
+                    "{\"direction\":\"%s\","
+                    "\"speed\":%.1f"
+                    "}",
+                    m->wind_readings.direction,
+                    m->wind_readings.speed);
+
+                msg_id = esp_mqtt_client_publish(
+                    ctx->mqtt_client,
+                    ctx->sensor_wind_topic,
+                    payload,
+                    0,
+                    1,      /* QoS 1 */
+                    0       /* not retained */
+                );
+                ESP_LOGI(TAG, "Published wind sensor readings: %s (msg_id=%d)", payload, msg_id);
+
             } break;
             // add more message types here if you need them
 
