@@ -42,7 +42,7 @@ static const ha_sensor_config_t ha_sensors[] = {
     { "sht31_temperature",      "Temperature",              "°C",  "{{ value_json.temperature }}",      "temperature",      NULL,         NULL },
     { "sht31_humidity",         "Humidity",                 "%",   "{{ value_json.humidity }}",         "humidity",         NULL,         NULL },
     { "wind_direction",         "Wind Direction",           NULL,  "{{ value_json.direction }}",        NULL,               NULL,         NULL },
-    { "wind_speed",             "Wind Speed",               "m/s", "{{ value_json.speed }}",            "speed",            NULL,         NULL }
+    { "wind_speed",             "Wind Speed",               "m/s", "{{ value_json.speed }}",            "wind_speed",            NULL,         NULL }
 };
 
 
