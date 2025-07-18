@@ -201,7 +201,7 @@ void sensors_task(void *pvParameters)
                 ctx->sensor_readings.wind_readings.direction = wind_data.direction;
                 xSemaphoreGive(ctx->sensorDataMutex);
 
-                ESP_LOGI(TAG, "[WIND] Direction: %s, Speed: %.1f", wind_data.direction, wind_data.speed);
+                ESP_LOGI(TAG, "[WIND] Direction: %s, Speed: %.1f m/s", wind_data.direction, wind_data.speed);
             }
     }
 
