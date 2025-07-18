@@ -115,11 +115,11 @@ void sensors_init(void *pvParameters)
         ESP_LOGI(TAG, "SHT31 initialised");
     }
 
-    ret = wind_sensor_direction_init();
+    ret = wind_sensor_init();
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Wind direction sensor init failed: %s", esp_err_to_name(ret));
+        ESP_LOGE(TAG, "Wind sensor init failed: %s", esp_err_to_name(ret));
     } else {
-        ESP_LOGI(TAG, "Wind direction sensor initialised");
+        ESP_LOGI(TAG, "Wind sensor initialised");
     }
 
 
@@ -190,7 +190,7 @@ void sensors_task(void *pvParameters)
             }
     }
 
-        err = wind_sensor_direction_read(&wind_data.direction);
+        err = wind_sensor_read(&wind_data);
         if (err != ESP_OK) {
             ESP_LOGW(TAG, "SHT31 read error (continuing): %s", esp_err_to_name(err));
         } else {
@@ -201,7 +201,7 @@ void sensors_task(void *pvParameters)
                 ctx->sensor_readings.wind_readings.direction = wind_data.direction;
                 xSemaphoreGive(ctx->sensorDataMutex);
 
-                ESP_LOGI(TAG, "[WIND] Direction: %s", wind_data.direction);
+                ESP_LOGI(TAG, "[WIND] Direction: %s, Speed: %.1f", wind_data.direction, wind_data.speed);
             }
     }
 
