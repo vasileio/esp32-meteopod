@@ -7,6 +7,7 @@
 #include "app_context.h"
 #include "mqtt.h"
 #include "bh1750.h"
+#include "freertos/FreeRTOS.h"
 
 static const char *TAG = "SENSORS";
 
@@ -54,6 +55,22 @@ static esp_err_t bme280_component_init(void *pvParameters) {
     }
     
     ESP_LOGI(TAG, "BME280 sensor initialised successfully");
+    return ESP_OK;
+}
+
+/**
+ * @brief initialise MPU6050 sensor
+ */
+static esp_err_t mpu6050_component_init(void *pvParameters)
+{
+    app_ctx_t *ctx = (app_ctx_t *)pvParameters;
+
+    esp_err_t ret = mpu6050_init(&ctx->mpu6050_sensor, I2C_PORT, MPU6050_I2C_ADDR);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "MPU6050 initialization failed: %s", esp_err_to_name(ret));
+        return ret;
+    }
+    ESP_LOGI(TAG, "MPU6050 sensor initialised successfully");
     return ESP_OK;
 }
 
@@ -130,8 +147,14 @@ void sensors_init(void *pvParameters)
         ESP_LOGI(TAG, "Light sensor initialised");
         bh1750_set_mode(&ctx->bh1750_sensor, CONTINUOUS_HIGH_RES_MODE);
     }
-    
 
+    /* initialise MPU6050 sensor */
+    ret = mpu6050_component_init(pvParameters);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "MPU6050 init failed: %s", esp_err_to_name(ret));
+    } else {
+        ESP_LOGI(TAG, "MPU6050 initialised");
+    }
 
 
     /* TODO: Add initialization for additional sensors here */
@@ -144,6 +167,7 @@ void sensors_task(void *pvParameters)
     sht31_data_t            sht31_data;
     wind_data_t             wind_data;
     float                   light_lux;
+    mpu6050_data_t          mpu_data;
     mqtt_queue_item_t       item;
     esp_err_t               err;
 
@@ -238,6 +262,23 @@ void sensors_task(void *pvParameters)
                 ESP_LOGI(TAG, "[LIGHT] Ambient light: %.0f", light_lux);
             }
     }
+
+        /* Read MPU6050 */
+        err = mpu6050_read_all(&ctx->mpu6050_sensor, &mpu_data);
+        if (err != ESP_OK) {
+            ESP_LOGW(TAG, "MPU6050 read error (continuing): %s", esp_err_to_name(err));
+        } else {
+            if (xSemaphoreTake(ctx->sensorDataMutex, portMAX_DELAY) == pdTRUE) {
+                ctx->sensor_readings.mpu6050_readings = mpu_data;
+                xSemaphoreGive(ctx->sensorDataMutex);
+
+                item.data.sensor.mpu6050_readings = mpu_data;
+
+                ESP_LOGI(TAG, "[MPU6050] Accel: %.2f, %.2f, %.2f g", mpu_data.accel_x, mpu_data.accel_y, mpu_data.accel_z);
+                ESP_LOGI(TAG, "[MPU6050] Gyro: %.2f, %.2f, %.2f dps", mpu_data.gyro_x, mpu_data.gyro_y, mpu_data.gyro_z);
+                ESP_LOGI(TAG, "[MPU6050] Temp: %.2f °C", mpu_data.temperature);
+            }
+        }
 
     /* Enqueue for the MQTT task to format & publish */
     if (xQueueSend(ctx->mqttPublishQueue, &item, portMAX_DELAY) != pdTRUE) {
