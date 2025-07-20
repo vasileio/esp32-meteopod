@@ -11,6 +11,19 @@
 
 static const char *TAG = "bme280";
 
+/*
+ * User calibration for humidity correction:
+ * Adjust these based on reference measurements:
+ * - BME280_HUM_CALIB_SLOPE: linear scale factor
+ * - BME280_HUM_CALIB_OFFSET: additive offset in %RH
+ */
+#ifndef BME280_HUM_CALIB_SLOPE
+#define BME280_HUM_CALIB_SLOPE   0.770f
+#endif
+#ifndef BME280_HUM_CALIB_OFFSET
+#define BME280_HUM_CALIB_OFFSET  -15.92f
+#endif
+
 /**
  * @brief  Load default configuration values into provided struct.
  * @param  config  Pointer to bme280_config_t to populate.
@@ -200,7 +213,8 @@ static float compensate_press(bme280_handle_t *h, int32_t adc_P)
  * @brief  Compensate raw humidity reading to relative humidity (% RH).
  *
  * Uses intermediate t_fine from temperature compensation.
- * Clamps output between 0 and 100%.
+ * Applies software calibration (slope + offset),
+ * then clamps output between 0 and 100%.
  *
  * @param  h      Device handle containing calibration data and t_fine.
  * @param  adc_H  Raw 16-bit humidity register value.
@@ -208,6 +222,7 @@ static float compensate_press(bme280_handle_t *h, int32_t adc_P)
  */
 static float compensate_hum(bme280_handle_t *h, int32_t adc_H)
 {
+    /* Standard Bosch compensation formula */
     float var_H = (float)h->t_fine - 76800.0f;
     var_H = (adc_H - ((float)h->calib.dig_H4 * 64.0f +
              ((float)h->calib.dig_H5 / 16384.0f) * var_H)) *
@@ -216,6 +231,10 @@ static float compensate_hum(bme280_handle_t *h, int32_t adc_H)
              (1.0f + ((float)h->calib.dig_H3 / 67108864.0f) * var_H));
     var_H = var_H * (1.0f - ((float)h->calib.dig_H1 * var_H / 524288.0f));
 
+    // /* Apply software calibration: scale and offset */
+    // var_H = var_H * BME280_HUM_CALIB_SLOPE + BME280_HUM_CALIB_OFFSET;
+
+    /* Clamp final corrected humidity to [0,100]% */
     if (var_H > 100.0f) {
         var_H = 100.0f;
     } else if (var_H < 0.0f) {
