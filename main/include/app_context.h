@@ -80,6 +80,7 @@ typedef struct {
     char                        sensor_rainfall_topic[TOPIC_LEN];
     char                        sensor_wind_topic[TOPIC_LEN];
     char                        sensor_light_topic[TOPIC_LEN];
+    char                        sensor_lightning_topic[TOPIC_LEN];
 } app_ctx_t;
 
 

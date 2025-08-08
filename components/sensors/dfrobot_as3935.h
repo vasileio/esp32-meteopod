@@ -8,6 +8,9 @@
 #pragma once
 
 #include "driver/i2c_master.h"
+#include "driver/gpio.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
 #include <stdint.h>
 #include <esp_err.h>
 
@@ -24,6 +27,8 @@ typedef struct {
     i2c_master_bus_handle_t bus;
     i2c_master_dev_handle_t dev;
     uint8_t i2c_addr;
+    gpio_num_t irq_pin;
+    QueueHandle_t irq_queue;
 } dfrobot_as3935_t;
 
 /**
@@ -73,6 +78,31 @@ typedef struct {
  * @warning Ensure I2C master is properly configured before calling this function.
  */
 esp_err_t dfrobot_as3935_init(dfrobot_as3935_t *sensor, i2c_port_t port, uint8_t addr);
+
+/**
+ * @brief Initialize the AS3935 lightning sensor with I2C communication and IRQ pin
+ * 
+ * This function initializes the AS3935 lightning sensor by setting up I2C communication,
+ * configuring the IRQ GPIO pin, and performing a soft reset to restore the sensor to
+ * its default configuration.
+ * 
+ * @param[out] sensor Pointer to AS3935 sensor structure to be initialized
+ * @param[in] port I2C port number (I2C_NUM_0 or I2C_NUM_1) 
+ * @param[in] addr 7-bit I2C device address (typically 0x03)
+ * @param[in] irq_pin GPIO pin number for interrupt signal
+ * 
+ * @return 
+ *         - ESP_OK: Success
+ *         - ESP_ERR_INVALID_ARG: Invalid arguments provided
+ *         - ESP_FAIL: I2C communication, GPIO, or sensor initialization failed
+ * 
+ * @note After successful initialization, the sensor will be in its default state.
+ *       IRQ will be configured for falling edge triggering.
+ *       Additional configuration may be required for optimal performance.
+ * 
+ * @warning Ensure I2C master is properly configured before calling this function.
+ */
+esp_err_t dfrobot_as3935_init_with_irq(dfrobot_as3935_t *sensor, i2c_port_t port, uint8_t addr, gpio_num_t irq_pin);
 
 /**
  * @brief Calibrate the internal RC oscillators automatically
@@ -212,6 +242,29 @@ esp_err_t dfrobot_as3935_set_indoor(dfrobot_as3935_t *sensor);
  * @return esp_err_t ESP_OK on success, error code otherwise
  */
 esp_err_t dfrobot_as3935_set_outdoor(dfrobot_as3935_t *sensor);
+
+/**
+ * @brief Process pending IRQ events from the AS3935 sensor
+ * 
+ * This function should be called periodically to check for and process
+ * any pending interrupt events from the AS3935 sensor. It will read the
+ * interrupt source register and populate the lightning_data structure
+ * if a lightning event was detected.
+ * 
+ * @param sensor Pointer to AS3935 sensor structure
+ * @param lightning_data Pointer to structure to populate with lightning data (if detected)
+ * @param timeout_ms Maximum time to wait for an IRQ event in milliseconds
+ * 
+ * @return 
+ *         - ESP_OK: IRQ event processed successfully
+ *         - ESP_ERR_TIMEOUT: No IRQ events within timeout period
+ *         - ESP_ERR_INVALID_ARG: Invalid arguments provided
+ *         - ESP_FAIL: I2C communication error
+ * 
+ * @note This function should only be called if the sensor was initialized with IRQ support.
+ *       If no IRQ queue exists, the function will return ESP_ERR_INVALID_ARG.
+ */
+esp_err_t dfrobot_as3935_process_irq(dfrobot_as3935_t *sensor, lightning_data_t *lightning_data, uint32_t timeout_ms);
 
 #ifdef __cplusplus
 }
