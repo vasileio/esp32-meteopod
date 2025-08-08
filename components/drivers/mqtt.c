@@ -44,7 +44,7 @@ static const ha_sensor_config_t ha_sensors[] = {
     { "wind_direction",         "Wind Direction",           NULL,  "{{ value_json.direction }}",        NULL,               NULL,         NULL },
     { "wind_speed",             "Wind Speed",               "m/s", "{{ value_json.speed }}",            "wind_speed",       NULL,         NULL },
     { "light",                  "Illuminance",              "lx",   "{{ value_json.illuminance }}",     "illuminance",      NULL,         NULL },
-    { "lightning_distance",     "Lightning Distance",       "km",  "{{ value_json.distance_km }}",      NULL,               NULL,         NULL },
+    { "lightning_distance",     "Lightning Distance",       "km",  "{{ value_json.distance_km }}",      "distance",               NULL,         NULL },
     { "lightning_energy",       "Lightning Strike Energy",  NULL,   "{{ value_json.strike_energy }}",    NULL,              NULL,         NULL }
 };
 
