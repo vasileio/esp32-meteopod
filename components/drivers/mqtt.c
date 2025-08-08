@@ -44,7 +44,7 @@ static const ha_sensor_config_t ha_sensors[] = {
     { "wind_direction",         "Wind Direction",           NULL,  "{{ value_json.direction }}",        NULL,               NULL,         NULL },
     { "wind_speed",             "Wind Speed",               "m/s", "{{ value_json.speed }}",            "wind_speed",       NULL,         NULL },
     { "light",                  "Illuminance",              "lx",   "{{ value_json.illuminance }}",     "illuminance",      NULL,         NULL },
-    { "lightning_distance",     "Lightning Distance",       "km",  "{{ value_json.distance_km }}",      "distance",               NULL,         NULL },
+    { "lightning_distance",     "Lightning Distance",       "km",  "{{ value_json.distance_km }}",      NULL,               NULL,         NULL },
     { "lightning_energy",       "Lightning Strike Energy",  NULL,   "{{ value_json.strike_energy }}",    NULL,              NULL,         NULL }
 };
 
@@ -603,24 +603,26 @@ void mqtt_task(void *pvParameters)
                 );
                 ESP_LOGI(TAG, "Published light sensor readings: %s (msg_id=%d)", payload, msg_id);
 
-                /* Lightning */
-                wipe_payload(payload, sizeof(payload));
-                snprintf(payload, sizeof(payload),
-                    "{\"distance_km\":%u,"
-                    "\"strike_energy\":%lu"
-                    "}",
-                    m->lightning_readings.distance_km,
-                    m->lightning_readings.strike_energy);
+                /* Lightning - only publish when there's actual lightning data */
+                if (m->lightning_detected) {
+                    wipe_payload(payload, sizeof(payload));
+                    snprintf(payload, sizeof(payload),
+                        "{\"distance_km\":%u,"
+                        "\"strike_energy\":%lu"
+                        "}",
+                        m->lightning_readings.distance_km,
+                        m->lightning_readings.strike_energy);
 
-                msg_id = esp_mqtt_client_publish(
-                    ctx->mqtt_client,
-                    ctx->sensor_lightning_topic,
-                    payload,
-                    0,
-                    1,      /* QoS 1 */
-                    0       /* not retained */
-                );
-                ESP_LOGI(TAG, "Published lightning sensor readings: %s (msg_id=%d)", payload, msg_id);
+                    msg_id = esp_mqtt_client_publish(
+                        ctx->mqtt_client,
+                        ctx->sensor_lightning_topic,
+                        payload,
+                        0,
+                        1,      /* QoS 1 */
+                        0       /* not retained */
+                    );
+                    ESP_LOGI(TAG, "Published lightning sensor readings: %s (msg_id=%d)", payload, msg_id);
+                }
             } break;
             // add more message types here if you need them
 

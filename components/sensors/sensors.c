@@ -286,11 +286,21 @@ void sensors_task(void *pvParameters)
             if (xSemaphoreTake(ctx->sensorDataMutex, portMAX_DELAY) == pdTRUE)
             {
                 ctx->sensor_readings.lightning_readings = lightning_data;
+                ctx->sensor_readings.lightning_detected = true;
                 xSemaphoreGive(ctx->sensorDataMutex);
 
                 /* Copy into our queue item */
                 item.data.sensor.lightning_readings = lightning_data;
+                item.data.sensor.lightning_detected = true;
             }
+        } else {
+            /* No lightning detected this cycle - clear the flag */
+            if (xSemaphoreTake(ctx->sensorDataMutex, portMAX_DELAY) == pdTRUE)
+            {
+                ctx->sensor_readings.lightning_detected = false;
+                xSemaphoreGive(ctx->sensorDataMutex);
+            }
+            item.data.sensor.lightning_detected = false;
         }
 
     /* Enqueue for the MQTT task to format & publish */

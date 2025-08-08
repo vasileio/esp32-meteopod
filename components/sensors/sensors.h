@@ -38,6 +38,7 @@ typedef struct
     wind_data_t         wind_readings;
     float               light_lux;
     lightning_data_t    lightning_readings;
+    bool                lightning_detected;  // Flag to indicate valid lightning data
 } sensor_readings_t;
 
 /**
