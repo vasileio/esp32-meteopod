@@ -7,8 +7,14 @@
 #include "app_context.h"
 #include "mqtt.h"
 #include "bh1750.h"
+#include "esp_system.h"
 
 static const char *TAG = "SENSORS";
+
+// Lightning emulation for testing purposes
+#define LIGHTNING_EMULATION_ENABLED 1
+#define LIGHTNING_EMULATION_INTERVAL_CYCLES 12  // ~60 seconds (12 * 5s)
+static uint32_t lightning_emulation_counter = 0;
 
 static bme280_handle_t bme_handle;  // static so it lives forever
 
@@ -247,9 +253,36 @@ void sensors_task(void *pvParameters)
             }
     }
 
+        bool lightning_detected = false;
+        
+        // Check for real lightning events
         err = dfrobot_as3935_process_irq(&ctx->as3935_sensor, &lightning_data, 100);
         if (err == ESP_OK) {
-            /* Lightning detected! */
+            lightning_detected = true;
+            ESP_LOGI(TAG, "[LIGHTNING] Real strike detected: %d km away, energy: %lu", 
+                     lightning_data.distance_km, lightning_data.strike_energy);
+        } else if (err != ESP_ERR_TIMEOUT) {
+            ESP_LOGW(TAG, "Lightning sensor IRQ processing error: %s", esp_err_to_name(err));
+        }
+        
+#if LIGHTNING_EMULATION_ENABLED
+        // Emulate lightning strikes for testing (every ~60 seconds)
+        lightning_emulation_counter++;
+        if (!lightning_detected && (lightning_emulation_counter >= LIGHTNING_EMULATION_INTERVAL_CYCLES)) {
+            lightning_emulation_counter = 0;
+            lightning_detected = true;
+            
+            // Generate simulated lightning data with some randomness
+            lightning_data.distance_km = (uint8_t)(1 + (esp_random() % 40));  // 1-40 km
+            lightning_data.strike_energy = 100000 + (esp_random() % 900000);   // 100K-1M energy
+            
+            ESP_LOGI(TAG, "[LIGHTNING] *** EMULATED *** Strike: %d km away, energy: %lu", 
+                     lightning_data.distance_km, lightning_data.strike_energy);
+        }
+#endif
+        
+        if (lightning_detected) {
+            /* Lightning detected (real or emulated)! */
             if (xSemaphoreTake(ctx->sensorDataMutex, portMAX_DELAY) == pdTRUE)
             {
                 ctx->sensor_readings.lightning_readings = lightning_data;
@@ -257,12 +290,7 @@ void sensors_task(void *pvParameters)
 
                 /* Copy into our queue item */
                 item.data.sensor.lightning_readings = lightning_data;
-
-                ESP_LOGI(TAG, "[LIGHTNING] Strike detected: %d km away, energy: %lu", 
-                         lightning_data.distance_km, lightning_data.strike_energy);
             }
-        } else if (err != ESP_ERR_TIMEOUT) {
-            ESP_LOGW(TAG, "Lightning sensor IRQ processing error: %s", esp_err_to_name(err));
         }
 
     /* Enqueue for the MQTT task to format & publish */
