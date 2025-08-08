@@ -43,7 +43,9 @@ static const ha_sensor_config_t ha_sensors[] = {
     { "sht31_humidity",         "Humidity",                 "%",   "{{ value_json.humidity }}",         "humidity",         NULL,         NULL },
     { "wind_direction",         "Wind Direction",           NULL,  "{{ value_json.direction }}",        NULL,               NULL,         NULL },
     { "wind_speed",             "Wind Speed",               "m/s", "{{ value_json.speed }}",            "wind_speed",       NULL,         NULL },
-    { "light",                  "Illuminance",              "lx",   "{{ value_json.illuminance }}",     "illuminance",      NULL,         NULL }
+    { "light",                  "Illuminance",              "lx",   "{{ value_json.illuminance }}",     "illuminance",      NULL,         NULL },
+    { "as3935_lightning_distance",     "Lightning Distance",       "km",  "{{ value_json.distance_km }}",      "distance",               NULL,         NULL },
+    { "as3935_lightning_energy",       "Lightning Strike Energy",  NULL,   "{{ value_json.strike_energy }}",    NULL,              NULL,         NULL }
 };
 
 
@@ -164,6 +166,10 @@ static const char *get_topic_for_suffix(const char *suffix, app_ctx_t *ctx) {
     // illuminance sensors all start with "light"
     if (strncmp(suffix, "light", 5) == 0) {
         return ctx->sensor_light_topic;
+    }
+    // AS3935 Lightning sensors all start with "as3935_lightning"
+    if (strncmp(suffix, "as3935_lightning", 16) == 0) {
+        return ctx->sensor_lightning_topic;
     }
     // Everything else on the single "metrics" topic
     if (strcmp(suffix, "metrics")   == 0 ||
@@ -293,6 +299,15 @@ esp_err_t mqtt_build_all_topics(app_ctx_t *ctx)
                             sizeof(ctx->sensor_light_topic));
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to build light topic: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    err = utils_build_topic(ctx->sensor_topic,
+                            "as3935_lightning",
+                            ctx->sensor_lightning_topic,
+                            sizeof(ctx->sensor_lightning_topic));
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to build as3935_lightning topic: %s", esp_err_to_name(err));
         return err;
     }
 
@@ -587,6 +602,27 @@ void mqtt_task(void *pvParameters)
                     0       /* not retained */
                 );
                 ESP_LOGI(TAG, "Published light sensor readings: %s (msg_id=%d)", payload, msg_id);
+
+                /* AS3935 Lightning - only publish when there's actual lightning data */
+                if (m->lightning_detected) {
+                    wipe_payload(payload, sizeof(payload));
+                    snprintf(payload, sizeof(payload),
+                        "{\"distance_km\":%u,"
+                        "\"strike_energy\":%lu"
+                        "}",
+                        m->lightning_readings.distance_km,
+                        m->lightning_readings.strike_energy);
+
+                    msg_id = esp_mqtt_client_publish(
+                        ctx->mqtt_client,
+                        ctx->sensor_lightning_topic,
+                        payload,
+                        0,
+                        1,      /* QoS 1 */
+                        0       /* not retained */
+                    );
+                    ESP_LOGI(TAG, "Published AS3935 lightning sensor readings: %s (msg_id=%d)", payload, msg_id);
+                }
             } break;
             // add more message types here if you need them
 

@@ -16,6 +16,7 @@
 #include "bme280.h"
 #include "i2c.h"
 #include "wind_sensor.h"
+#include "dfrobot_as3935.h"
 
 #define BME280_READY_TIMEOUT_MS   1000
 #define BME280_POLL_INTERVAL_MS     10
@@ -32,10 +33,12 @@
  */
 typedef struct 
 {
-    bme280_data_t   bme280_readings;
-    sht31_data_t    sht31_readings;
-    wind_data_t     wind_readings;
-    float           light_lux;
+    bme280_data_t       bme280_readings;
+    sht31_data_t        sht31_readings;
+    wind_data_t         wind_readings;
+    float               light_lux;
+    lightning_data_t    lightning_readings;
+    bool                lightning_detected;  // Flag to indicate valid lightning data
 } sensor_readings_t;
 
 /**
