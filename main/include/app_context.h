@@ -17,6 +17,7 @@
 #include "sht31.h"
 #include "bme280.h"
 #include "bh1750.h"   
+#include "dfrobot_as3935.h"
 
 /* MQTT */
 // #include "mqtt.h"
@@ -39,6 +40,7 @@ typedef struct {
     DFRobot_rainfall_sensor_t   rain_sensor;
     sht31_handle_t              sh31_sensor;
     bh1750_handle_t             bh1750_sensor;
+    dfrobot_as3935_t            as3935_sensor;
 
     /* Queues */
     QueueHandle_t               sensorDataQueue;

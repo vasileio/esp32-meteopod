@@ -131,7 +131,13 @@ void sensors_init(void *pvParameters)
         bh1750_set_mode(&ctx->bh1750_sensor, CONTINUOUS_HIGH_RES_MODE);
     }
     
-
+    ret = dfrobot_as3935_init(&ctx->as3935_sensor, I2C_PORT, AS3935_I2C_ADDR);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Lightning sensor init failed: %s", esp_err_to_name(ret));
+    } else {
+        ESP_LOGI(TAG, "Lightning sensor initialised");
+        dfrobot_as3935_set_indoor(&ctx->as3935_sensor);
+    }
 
 
     /* TODO: Add initialization for additional sensors here */
