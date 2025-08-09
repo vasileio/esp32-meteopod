@@ -32,10 +32,40 @@ jobs:
       run: |
         source /opt/esp-idf/export.sh
         idf.py -C unity-app -DTESTS_ALL=1 fullclean
+        cp /opt/sdkconfig.defaults.unity ./unity-app
         idf.py -C unity-app -DTESTS_ALL=1 build
 
-  flash:
+  test:
     needs: build
+    runs-on: [self-hosted, Linux, X64]
+
+    steps:
+    - name: Run unit tests on target
+      shell: bash
+      run: |
+        source /opt/esp-idf/export.sh
+        cp /opt/test_runner.py .
+        python3 test_runner.py --port /dev/ttyUSB1 --firmware unity-app/build/esp32_meteopod_test_app.bin --timeout 300 --output results.xml
+  
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: unity-test-results
+        path: |
+          results.xml
+          test_output.log
+          
+    - name: Publish test results
+      uses: dorny/test-reporter@v1
+      if: always()
+      with:
+        name: ESP32 Unity Tests
+        path: results.xml
+        reporter: java-junit
+        
+  flash:
+    needs: test
     runs-on: [self-hosted, Linux, X64]
 
     steps:
