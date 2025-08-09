@@ -160,6 +160,7 @@ void sensors_init(void *pvParameters)
         ESP_LOGE(TAG, "MPU6050 init failed: %s", esp_err_to_name(ret));
     } else {
         ESP_LOGI(TAG, "MPU6050 initialised");
+    }
 
 
     ret = dfrobot_as3935_init_with_irq(&ctx->as3935_sensor, I2C_PORT, AS3935_I2C_ADDR, GPIO_NUM_4);
@@ -170,9 +171,7 @@ void sensors_init(void *pvParameters)
         dfrobot_as3935_set_indoor(&ctx->as3935_sensor);
         dfrobot_as3935_set_min_lightning(&ctx->as3935_sensor, 1);
     }
-
-
-    /* TODO: Add initialization for additional sensors here */
+        /* TODO: Add initialization for additional sensors here */
 }
 
 void sensors_task(void *pvParameters)
@@ -239,7 +238,7 @@ void sensors_task(void *pvParameters)
                 ESP_LOGI(TAG, "[SHT31] Temperature: %.2f °C", sht31_data.temperature);
                 ESP_LOGI(TAG, "[SHT31] Humidity:    %.2f %%RH", sht31_data.humidity);
             }
-    }
+        }
 
         err = wind_sensor_read(&wind_data);
         if (err != ESP_OK) {
@@ -259,7 +258,7 @@ void sensors_task(void *pvParameters)
                 ESP_LOGI(TAG, "[WIND] Direction: %s", wind_data.direction);
                 ESP_LOGI(TAG, "[WIND] Speed: %.1f m/s", wind_data.speed);
             }
-    }
+        }
 
         err = bh1750_read_light(&ctx->bh1750_sensor, &light_lux);
         if (err != ESP_OK) {
@@ -277,7 +276,7 @@ void sensors_task(void *pvParameters)
 
                 ESP_LOGI(TAG, "[LIGHT] Ambient light: %.0f", light_lux);
             }
-    }
+        }
 
         /* Read MPU6050 */
         err = mpu6050_read_all(&ctx->mpu6050_sensor, &mpu_data);
@@ -294,6 +293,7 @@ void sensors_task(void *pvParameters)
                 ESP_LOGI(TAG, "[MPU6050] Gyro: %.2f, %.2f, %.2f dps", mpu_data.gyro_x, mpu_data.gyro_y, mpu_data.gyro_z);
                 ESP_LOGI(TAG, "[MPU6050] Temp: %.2f °C", mpu_data.temperature);
             }
+        }
 
         bool lightning_detected = false;
         
@@ -349,8 +349,8 @@ void sensors_task(void *pvParameters)
     if (xQueueSend(ctx->mqttPublishQueue, &item, portMAX_DELAY) != pdTRUE) {
         ESP_LOGW(TAG, "MQTT metrics queue full, dropping heartbeat");
     }
-        /* TODO: Read additional sensors here */
-
-        vTaskDelay(pdMS_TO_TICKS(SENSOR_READ_INTERVAL_MS));
-    }
+    
+    /* TODO: Read additional sensors here */
+    vTaskDelay(pdMS_TO_TICKS(SENSOR_READ_INTERVAL_MS));
+        }
 }
