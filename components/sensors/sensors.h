@@ -16,6 +16,7 @@
 #include "bme280.h"
 #include "i2c.h"
 #include "wind_sensor.h"
+#include "mpu6050.h"
 #include "dfrobot_as3935.h"
 
 #define BME280_READY_TIMEOUT_MS   1000
@@ -36,6 +37,7 @@ typedef struct
     bme280_data_t       bme280_readings;
     sht31_data_t        sht31_readings;
     wind_data_t         wind_readings;
+    mpu6050_data_t      mpu6050_readings;
     float               light_lux;
     lightning_data_t    lightning_readings;
     bool                lightning_detected;  // Flag to indicate valid lightning data
