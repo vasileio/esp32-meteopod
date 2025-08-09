@@ -263,7 +263,7 @@ TEST_CASE("SHT31 read temp hum succeeds with valid CRC", "[sht31]") {
     /* Humidity raw: 0x8000 (should give ~50%RH) */
     fake_buf[0] = 0x66;  /* Temp MSB */
     fake_buf[1] = 0x66;  /* Temp LSB */
-    fake_buf[2] = 0x92;  /* Temp CRC (calculated for 0x6666) */
+    fake_buf[2] = 0x93;  /* Temp CRC (calculated for 0x6666) */
     fake_buf[3] = 0x80;  /* Hum MSB */
     fake_buf[4] = 0x00;  /* Hum LSB */
     fake_buf[5] = 0xA2;  /* Hum CRC (calculated for 0x8000) */
@@ -376,7 +376,7 @@ TEST_CASE("SHT31 read temp hum works with null temperature pointer", "[sht31]") 
     /* Mock valid sensor data with correct CRCs */
     fake_buf[0] = 0x66;  /* Temp MSB */
     fake_buf[1] = 0x66;  /* Temp LSB */
-    fake_buf[2] = 0x92;  /* Temp CRC */
+    fake_buf[2] = 0x93;  /* Temp CRC */
     fake_buf[3] = 0x80;  /* Hum MSB */
     fake_buf[4] = 0x00;  /* Hum LSB */
     fake_buf[5] = 0xA2;  /* Hum CRC */
@@ -404,7 +404,7 @@ TEST_CASE("SHT31 read temp hum works with null humidity pointer", "[sht31]") {
     /* Mock valid sensor data with correct CRCs */
     fake_buf[0] = 0x66;  /* Temp MSB */
     fake_buf[1] = 0x66;  /* Temp LSB */
-    fake_buf[2] = 0x92;  /* Temp CRC */
+    fake_buf[2] = 0x93;  /* Temp CRC */
     fake_buf[3] = 0x80;  /* Hum MSB */
     fake_buf[4] = 0x00;  /* Hum LSB */
     fake_buf[5] = 0xA2;  /* Hum CRC */
@@ -432,7 +432,7 @@ TEST_CASE("SHT31 read temperature only succeeds", "[sht31]") {
     /* Mock valid sensor data with correct CRCs */
     fake_buf[0] = 0x66;  /* Temp MSB */
     fake_buf[1] = 0x66;  /* Temp LSB */
-    fake_buf[2] = 0x92;  /* Temp CRC */
+    fake_buf[2] = 0x93;  /* Temp CRC */
     fake_buf[3] = 0x80;  /* Hum MSB */
     fake_buf[4] = 0x00;  /* Hum LSB */
     fake_buf[5] = 0xA2;  /* Hum CRC */
@@ -460,7 +460,7 @@ TEST_CASE("SHT31 read humidity only succeeds", "[sht31]") {
     /* Mock valid sensor data with correct CRCs */
     fake_buf[0] = 0x66;  /* Temp MSB */
     fake_buf[1] = 0x66;  /* Temp LSB */
-    fake_buf[2] = 0x92;  /* Temp CRC */
+    fake_buf[2] = 0x93;  /* Temp CRC */
     fake_buf[3] = 0x80;  /* Hum MSB */
     fake_buf[4] = 0x00;  /* Hum LSB */
     fake_buf[5] = 0xA2;  /* Hum CRC */
@@ -488,10 +488,10 @@ TEST_CASE("SHT31 temperature conversion edge cases", "[sht31]") {
     /* Test minimum temperature raw value (0x0000 should give ~-45°C) */
     fake_buf[0] = 0x00;  /* Temp MSB */
     fake_buf[1] = 0x00;  /* Temp LSB */
-    fake_buf[2] = 0xAC;  /* Temp CRC for 0x0000 */
+    fake_buf[2] = 0x81;  /* Temp CRC for 0x0000 */
     fake_buf[3] = 0x00;  /* Hum MSB */
     fake_buf[4] = 0x00;  /* Hum LSB */
-    fake_buf[5] = 0xAC;  /* Hum CRC for 0x0000 */
+    fake_buf[5] = 0x81;  /* Hum CRC for 0x0000 */
     
     float temperature, humidity;
     esp_err_t err = sht31_read_temp_hum(&handle, &temperature, &humidity);
@@ -516,10 +516,10 @@ TEST_CASE("SHT31 humidity conversion edge cases", "[sht31]") {
     /* Test maximum humidity raw value (0xFFFF should give ~100%RH) */
     fake_buf[0] = 0x00;  /* Temp MSB */
     fake_buf[1] = 0x00;  /* Temp LSB */
-    fake_buf[2] = 0xAC;  /* Temp CRC for 0x0000 */
+    fake_buf[2] = 0x81;  /* Temp CRC for 0x0000 */
     fake_buf[3] = 0xFF;  /* Hum MSB */
     fake_buf[4] = 0xFF;  /* Hum LSB */
-    fake_buf[5] = 0xFF;  /* Hum CRC for 0xFFFF */
+    fake_buf[5] = 0xAC;  /* Hum CRC for 0xFFFF */
     
     float temperature, humidity;
     esp_err_t err = sht31_read_temp_hum(&handle, &temperature, &humidity);
