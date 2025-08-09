@@ -38,6 +38,12 @@ jobs:
   test:
     needs: build
     runs-on: [self-hosted, Linux, X64]
+    permissions:
+      contents: read
+      actions: read
+      checks: write
+      pull-requests: write
+      statuses: write
 
     steps:
     - name: Run unit tests on target
