@@ -1,15 +1,36 @@
-// i2c_test_stubs.c
+/**
+ * @file i2c_test_stubs.c
+ * @brief I2C and system function stubs for sensor unit tests
+ *
+ * This file provides stub implementations of I2C master functions, GPIO functions,
+ * and FreeRTOS functions to enable unit testing of sensor drivers without requiring
+ * actual hardware or full ESP-IDF environment.
+ */
 
 #include "unity.h"
 #include <string.h>
 #include "esp_err.h"
 #include "driver/i2c_master.h"
+#include "driver/gpio.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
+#include "freertos/task.h"
 
-/* Shared stub variables (visible to all test CUs) */
-esp_err_t stub_transmit_ret;
-esp_err_t stub_receive_ret;
-uint8_t    fake_buf[8];  // big enough for all tests
+/**
+ * @brief Shared stub variables (visible to all test CUs)
+ */
+esp_err_t stub_transmit_ret;  /**< Return value for I2C transmit operations */
+esp_err_t stub_receive_ret;   /**< Return value for I2C receive operations */
+uint8_t    fake_buf[8];       /**< Buffer for simulated I2C data (big enough for all tests) */
 
+/**
+ * @brief Stub implementation of i2c_master_bus_add_device
+ *
+ * @param bus I2C bus handle (ignored)
+ * @param cfg Device configuration (ignored)
+ * @param out_handle Pointer to store device handle
+ * @return ESP_OK always
+ */
 esp_err_t i2c_master_bus_add_device(
     i2c_master_bus_handle_t bus,
     const i2c_device_config_t *cfg,
@@ -21,6 +42,15 @@ esp_err_t i2c_master_bus_add_device(
     return ESP_OK;
 }
 
+/**
+ * @brief Stub implementation of i2c_master_transmit
+ *
+ * @param dev I2C device handle (ignored)
+ * @param data Data to transmit (ignored)
+ * @param len Length of data (ignored)
+ * @param xfer_timeout_ms Transfer timeout in milliseconds (ignored)
+ * @return Value of stub_transmit_ret
+ */
 esp_err_t i2c_master_transmit(
     i2c_master_dev_handle_t dev,
     const uint8_t *data,
@@ -34,6 +64,15 @@ esp_err_t i2c_master_transmit(
     return stub_transmit_ret;
 }
 
+/**
+ * @brief Stub implementation of i2c_master_receive
+ *
+ * @param dev I2C device handle (ignored)
+ * @param data Buffer to store received data
+ * @param len Length of data to receive
+ * @param xfer_timeout_ms Transfer timeout in milliseconds (ignored)
+ * @return Value of stub_receive_ret
+ */
 esp_err_t i2c_master_receive(
     i2c_master_dev_handle_t dev,
     uint8_t *data,
@@ -46,12 +85,82 @@ esp_err_t i2c_master_receive(
     return stub_receive_ret;
 }
 
+/**
+ * @brief Stub implementation of i2c_master_transmit_receive
+ *
+ * @param dev I2C device handle (ignored)
+ * @param write_data Data to transmit (ignored)
+ * @param write_size Size of write data (ignored)
+ * @param read_data Buffer to store received data
+ * @param read_size Size of read data
+ * @param xfer_timeout_ms Transfer timeout in milliseconds (ignored)
+ * @return Value of stub_receive_ret
+ */
+esp_err_t i2c_master_transmit_receive(
+    i2c_master_dev_handle_t dev,
+    const uint8_t *write_data,
+    size_t write_size,
+    uint8_t *read_data,
+    size_t read_size,
+    int xfer_timeout_ms
+) {
+    (void)dev;
+    (void)write_data;
+    (void)write_size;
+    (void)xfer_timeout_ms;
+    memcpy(read_data, fake_buf, read_size);
+    return stub_receive_ret;
+}
+
+/**
+ * @brief Stub implementation of i2c_master_get_bus_handle
+ *
+ * @param port_num I2C port number (ignored)
+ * @param ret_handle Pointer to store bus handle
+ * @return ESP_OK always
+ */
+esp_err_t i2c_master_get_bus_handle(i2c_port_num_t port_num, i2c_master_bus_handle_t *ret_handle) {
+    (void)port_num;
+    *ret_handle = (i2c_master_bus_handle_t)0x5678;
+    return ESP_OK;
+}
+
+/**
+ * @brief Stub implementation of i2c_master_bus_rm_device
+ *
+ * @param handle I2C device handle (ignored)
+ * @return ESP_OK always
+ */
+esp_err_t i2c_master_bus_rm_device(i2c_master_dev_handle_t handle) {
+    (void)handle;
+    return ESP_OK;
+}
+
+/**
+ * @brief Mock data for queue simulation (used by AS3935 tests)
+ */
+uint8_t mock_queue_data[32];        /**< Mock queue data buffer */
+bool mock_queue_has_data = false;   /**< Flag indicating if mock queue has data */
+
+/**
+ * @brief Unity test setup function
+ *
+ * Called before each test case to initialize stub variables
+ * and reset mock data to known state.
+ */
 void setUp(void) {
     stub_transmit_ret = ESP_OK;
     stub_receive_ret  = ESP_OK;
     memset(fake_buf, 0, sizeof(fake_buf));
+    mock_queue_has_data = false;
+    memset(mock_queue_data, 0, sizeof(mock_queue_data));
 }
 
+/**
+ * @brief Unity test teardown function
+ *
+ * Called after each test case. Currently no cleanup required.
+ */
 void tearDown(void) {
     /* nothing */
 }
