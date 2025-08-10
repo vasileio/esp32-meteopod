@@ -326,10 +326,10 @@ def generate_junit_xml(self, output_file):
 ```
 
 def test_basic_connection(port, baud_rate):
-“”“Quick connection test”””
+"""Quick connection test"""
 try:
 with serial.Serial(port, baud_rate, timeout=1) as ser:
-print(f”✓ Successfully opened {port}”)
+print(f"✓ Successfully opened {port}")
 ser.dtr = False
 ser.rts = True
 time.sleep(0.1)
