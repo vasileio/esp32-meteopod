@@ -359,7 +359,7 @@ parser.add_argument('--baud', type=int, default=115200, help='Baud rate')
 parser.add_argument('--skip-flash', action='store_true', help='Skip firmware flashing')
 parser.add_argument('--diagnostic', action='store_true', help='Run connection diagnostic first')
 parser.add_argument('--unity-cmd', default='*', help='Unity command to run tests (default: *)')
-parser.add_argument('--no-auto-trigger', action='store_true', help='Don't automatically send Unity commands')
+parser.add_argument('--no-auto-trigger', action='store_true', help='Do not send Unity commands automatically')
 
 ```
 args = parser.parse_args()
