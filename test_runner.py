@@ -350,16 +350,16 @@ except Exception as e:
 ```
 
 def main():
-parser = argparse.ArgumentParser(description=‘ESP32 Unity Test Runner’)
-parser.add_argument(’–port’, required=True, help=‘Serial port (e.g., /dev/ttyUSB0)’)
-parser.add_argument(’–firmware’, required=True, help=‘Firmware binary path’)
-parser.add_argument(’–output’, default=‘results.xml’, help=‘Output JUnit XML file’)
-parser.add_argument(’–timeout’, type=int, default=120, help=‘Test timeout in seconds’)
-parser.add_argument(’–baud’, type=int, default=115200, help=‘Baud rate’)
-parser.add_argument(’–skip-flash’, action=‘store_true’, help=‘Skip firmware flashing’)
-parser.add_argument(’–diagnostic’, action=‘store_true’, help=‘Run connection diagnostic first’)
-parser.add_argument(’–unity-cmd’, default=’*’, help=‘Unity command to run tests (default: *)’)
-parser.add_argument(’–no-auto-trigger’, action=‘store_true’, help=‘Don't automatically send Unity commands’)
+parser = argparse.ArgumentParser(description='ESP32 Unity Test Runner')
+parser.add_argument('–port', required=True, help='Serial port (e.g., /dev/ttyUSB0)')
+parser.add_argument('–firmware', required=True, help='Firmware binary path')
+parser.add_argument('–output', default='results.xml', help='Output JUnit XML file')
+parser.add_argument('–timeout', type=int, default=120, help='Test timeout in seconds')
+parser.add_argument('–baud', type=int, default=115200, help='Baud rate')
+parser.add_argument('–skip-flash', action='store_true', help='Skip firmware flashing')
+parser.add_argument('–diagnostic', action='store_true', help='Run connection diagnostic first')
+parser.add_argument('–unity-cmd', default='*', help='Unity command to run tests (default: *)')
+parser.add_argument('–no-auto-trigger', action='store_true', help='Don't automatically send Unity commands')
 
 ```
 args = parser.parse_args()
@@ -435,5 +435,5 @@ else:
     sys.exit(1)
 ```
 
-if **name** == ‘**main**’:
+if **name** == '**main**':
 main()
