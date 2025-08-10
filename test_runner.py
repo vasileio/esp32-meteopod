@@ -14,7 +14,7 @@ from xml.etree.ElementTree import Element, SubElement, tostring
 from xml.dom import minidom
 
 class ESP32TestRunner:
-def init(self, port, baud_rate=115200, timeout=120, unity_cmd=’*’, auto_trigger=True):
+def **init**(self, port, baud_rate=115200, timeout=120, unity_cmd='*', auto_trigger=True):
 self.port = port
 self.baud_rate = baud_rate
 self.timeout = timeout
