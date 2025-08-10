@@ -21,7 +21,9 @@ class ESP32TestRunner:
         self.test_results = []
         self.unity_cmd = unity_cmd
         self.auto_trigger = auto_trigger
-        
+        self.test_summary = None  # Store the final test summary
+        self.timed_out = False    # Track if test run timed out
+
     def flash_firmware(self, firmware_path):
         """Flash the test firmware to ESP32"""
         print(f"Flashing {firmware_path} to {self.port}")
@@ -182,6 +184,11 @@ class ESP32TestRunner:
                     except KeyboardInterrupt:
                         print("\nInterrupted by user")
                         break
+                
+                # Check if we timed out
+                if time.time() - start_time >= self.timeout:
+                    print(f"\nTIMEOUT: Tests exceeded maximum runtime of {self.timeout} seconds")
+                    self.timed_out = True
                         
                 print(f"\nTest run completed. Captured {len(output_lines)} lines of output.")
                 
@@ -216,6 +223,19 @@ class ESP32TestRunner:
         current_test = None
         
         for line in lines:
+            # Look for test summary line: "n Tests m Failures k Ignored"
+            summary_match = re.search(r'(\d+)\s+Tests?\s+(\d+)\s+Failures?\s+(\d+)\s+Ignored', line)
+            if summary_match:
+                tests_count = int(summary_match.group(1))
+                failures_count = int(summary_match.group(2))
+                ignored_count = int(summary_match.group(3))
+                self.test_summary = {
+                    'tests': tests_count,
+                    'failures': failures_count,
+                    'ignored': ignored_count
+                }
+                print(f"Found test summary: {tests_count} Tests {failures_count} Failures {ignored_count} Ignored")
+            
             # Test start: TEST_FILE:LINE:test_function_name:PASS/FAIL
             match = re.match(r'(.+?):(\d+):(.+?):(PASS|FAIL|IGNORE)', line)
             if match:
@@ -241,6 +261,27 @@ class ESP32TestRunner:
                 self.test_results.append(test_case)
                 
         print(f"Parsed {len(self.test_results)} test results")
+
+    def get_test_status(self):
+        """
+        Return pass/fail status based on test results.
+        Returns True if tests passed, False if failed or timed out.
+        """
+        # Return False if timed out
+        if self.timed_out:
+            return False
+            
+        # If we have a test summary, use that
+        if self.test_summary:
+            return self.test_summary['failures'] == 0
+            
+        # Fallback: check individual test results
+        if self.test_results:
+            failures = sum(1 for t in self.test_results if t['result'] == 'FAIL')
+            return failures == 0
+            
+        # No test results found - consider this a failure
+        return False
         
     def generate_junit_xml(self, output_file):
         """Generate JUnit XML from test results"""
@@ -281,9 +322,7 @@ class ESP32TestRunner:
             f.write(pretty_xml)
             
         print(f"JUnit XML written to {output_file}")
-        
-        # Return exit code based on results
-        return 0 if failures == 0 else 1
+
 
 def test_basic_connection(port, baud_rate):
     """Quick connection test"""
@@ -307,6 +346,7 @@ def test_basic_connection(port, baud_rate):
         print(f"✗ Connection failed: {e}")
         return False
 
+
 def main():
     parser = argparse.ArgumentParser(description='ESP32 Unity Test Runner')
     parser.add_argument('--port', required=True, help='Serial port (e.g., /dev/ttyUSB0)')
@@ -317,16 +357,16 @@ def main():
     parser.add_argument('--skip-flash', action='store_true', help='Skip firmware flashing')
     parser.add_argument('--diagnostic', action='store_true', help='Run connection diagnostic first')
     parser.add_argument('--unity-cmd', default='*', help='Unity command to run tests (default: *)')
-    parser.add_argument('--no-auto-trigger', action='store_true', help='Don\'t automatically send Unity commands')
-    
+    parser.add_argument('--no-auto-trigger', action='store_true', help='Do not send Unity commands automatically')
+
     args = parser.parse_args()
-    
+
     # Run diagnostic if requested
     if args.diagnostic:
         print("Running connection diagnostic...")
         test_basic_connection(args.port, args.baud)
         print("-" * 50)
-    
+
     runner = ESP32TestRunner(
         args.port, 
         args.baud, 
@@ -334,33 +374,36 @@ def main():
         args.unity_cmd, 
         not args.no_auto_trigger
     )
-    
+
     # Flash firmware (unless skipped)
     if not args.skip_flash:
         if not runner.flash_firmware(args.firmware):
             print("HINT: Use --skip-flash if firmware is already loaded")
+            print("RESULT: FAIL")
             sys.exit(1)
     else:
         print("Skipping firmware flash (using existing firmware)")
-    
+
     # Run tests
     try:
         output = runner.run_tests()
         if output is None:
             print("\nFailed to get test output. Try:")
             print(f"  python3 esp32_diagnostic.py --port {args.port}")
+            print("RESULT: FAIL")
             sys.exit(1)
     except KeyboardInterrupt:
         print("\n\nTest execution interrupted by user")
+        print("RESULT: FAIL")
         sys.exit(1)
-    
+
     # Save raw output
     with open('test_output.log', 'w') as f:
         f.write('\n'.join(output))
-    
-    # Generate XML and exit with appropriate code
-    exit_code = runner.generate_junit_xml(args.output)
-    
+
+    # Generate XML
+    runner.generate_junit_xml(args.output)
+
     # Print summary
     if runner.test_results:
         passed = sum(1 for t in runner.test_results if t['result'] == 'PASS')
@@ -371,9 +414,23 @@ def main():
         print(f"Failed: {failed}") 
         print(f"Ignored: {ignored}")
         print(f"Total: {len(runner.test_results)}")
-    
-    sys.exit(exit_code)
+
+    # Determine pass/fail and exit with appropriate code
+    test_passed = runner.get_test_status()
+
+    if test_passed:
+        print("RESULT: PASS")
+        sys.exit(0)
+    else:
+        print("RESULT: FAIL")
+        if runner.timed_out:
+            print("Reason: Test execution timed out")
+        elif runner.test_summary and runner.test_summary['failures'] > 0:
+            print(f"Reason: {runner.test_summary['failures']} test failures")
+        else:
+            print("Reason: No valid test results found or test failures")
+        sys.exit(1)
+
 
 if __name__ == '__main__':
     main()
-
