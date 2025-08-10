@@ -50,7 +50,8 @@ jobs:
       shell: bash
       run: |
         source /opt/esp-idf/export.sh
-        cp /opt/test_runner.py .
+        /usr/local/bin/manage_usb_power cycle ttyUSB1
+        esptool.py erase_flash
         python3 test_runner.py --port /dev/ttyUSB1 --firmware unity-app/build/esp32_meteopod_test_app.bin --timeout 300 --output results.xml
   
     - name: Upload test results

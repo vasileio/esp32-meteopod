@@ -27,12 +27,8 @@ class ESP32TestRunner:
         print(f"Flashing {firmware_path} to {self.port}")
         
         cmd = [
-            "python3", "-m", "esptool",
-            "--chip", "esp32",
-            "--port", self.port,
-            "--baud", str(self.baud_rate),
-            "write_flash",
-            "0x10000", firmware_path
+            "idf.py", "-C", "unity-app",
+            "-DTESTS_ALL=1", "flash"
         ]
         
         result = subprocess.run(cmd, capture_output=True, text=True)
