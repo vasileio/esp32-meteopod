@@ -5,15 +5,6 @@
 #define BLINK_GPIO           2
 #define WATCHDOG_TIMEOUT_SEC 5
 
-static void watchdog_task(void *pvParameters)
-{
-    esp_task_wdt_add(NULL);
-    while(1)
-    {
-        esp_task_wdt_reset();
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
-}
 
 static void blink_task(void *pvParameters)
 {
@@ -58,6 +49,15 @@ void app_main(void)
 
     ctx.sensorDataMutex = xSemaphoreCreateMutex();
 
+    /* Initialize watchdog system */
+    watchdog_config_t watchdog_config = WATCHDOG_CONFIG_DEFAULT();
+    watchdog_config.check_period_ms = 2000;
+    watchdog_config.task_timeout_ms = 30000;
+    esp_err_t watchdog_err = watchdog_init(&watchdog_config);
+    if (watchdog_err != ESP_OK) {
+        ESP_LOGE(TAG, "Watchdog init failed: %s", esp_err_to_name(watchdog_err));
+    }
+
     /* Build MQTT topics */
     /* 1) Read raw MAC */
     esp_read_mac(ctx.device_mac, ESP_MAC_WIFI_STA);
@@ -81,5 +81,13 @@ void app_main(void)
     xTaskCreate(system_monitor_task,  "monitor",      STACK_MONITOR_WORDS,  &ctx, PRIO_MONITOR,  &ctx.monitorTaskHandle);
     xTaskCreate(mqtt_task,            "mqtt_task",    STACK_MQTT_WORDS,     &ctx, PRIO_MQTT,     &ctx.mqttTaskHandle);
     xTaskCreate(sensors_task,         "sensors_task", STACK_SENSORS_WORDS,  &ctx, PRIO_SENSORS,  &ctx.sensorTaskHandle);
+
+    /* Register critical tasks for monitoring */
+    if (watchdog_err == ESP_OK) {
+        watchdog_register_task(ctx.monitorTaskHandle, "monitor");
+        watchdog_register_task(ctx.mqttTaskHandle, "mqtt_task");
+        watchdog_register_task(ctx.sensorTaskHandle, "sensors_task");
+        ESP_LOGI(TAG, "Critical tasks registered with watchdog");
+    }
 
 }
