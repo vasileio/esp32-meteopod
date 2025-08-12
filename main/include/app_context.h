@@ -12,29 +12,12 @@
 #include "freertos/semphr.h"
 
 /* Sensor headers */
+#include "sensors.h"
 #include "dfrobot_rainfall_sensor.h"
 #include "sht31.h"
 #include "bme280.h"
 #include "bh1750.h"   
 #include "dfrobot_as3935.h"
-#include "wind_sensor.h"
-#include "mpu6050.h"
-
-/**
- * @brief Sensors readings structure
- *
- * Contains all readings acquired by the various sensors.
- */
-typedef struct 
-{
-    bme280_data_t       bme280_readings;
-    sht31_data_t        sht31_readings;
-    wind_data_t         wind_readings;
-    mpu6050_data_t      mpu6050_readings;
-    float               light_lux;
-    lightning_data_t    lightning_readings;
-    bool                lightning_detected;  // Flag to indicate valid lightning data
-} sensor_readings_t;
 
 /* MQTT */
 // #include "mqtt.h"
