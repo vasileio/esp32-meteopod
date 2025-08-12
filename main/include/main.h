@@ -24,3 +24,4 @@
 #include "dfrobot_rainfall_sensor.h"
 #include "sensors.h"
 #include "mqtt.h"
+#include "watchdog.h"
