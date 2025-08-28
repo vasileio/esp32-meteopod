@@ -51,7 +51,10 @@ static const ha_sensor_config_t ha_sensors[] = {
     { "mpu6050_gyro_y",         "Gyro Y",                   "°/s",  "{{ value_json.gyro_y }}",          NULL,               "diagnostic", NULL },
     { "mpu6050_gyro_z",         "Gyro Z",                   "°/s",  "{{ value_json.gyro_z }}",          NULL,               "diagnostic", NULL },
     { "as3935_lightning_distance",     "Lightning Distance",       "km",  "{{ value_json.distance_km }}",      "distance",               NULL,         NULL },
-    { "as3935_lightning_energy",       "Lightning Strike Energy",  NULL,   "{{ value_json.strike_energy }}",    NULL,              NULL,         NULL }
+    { "as3935_lightning_energy",       "Lightning Strike Energy",  NULL,   "{{ value_json.strike_energy }}",    NULL,              NULL,         NULL },
+    { "rainfall_cumulative",           "Rainfall (Cumulative)",      "mm",  "{{ value_json.cumulative }}",       "precipitation",          NULL,         NULL },
+    { "rainfall_1h",                   "Rainfall (1h)",            "mm",  "{{ value_json.rainfall_1h }}",      "precipitation",          NULL,         NULL },
+    { "rainfall_raw_count",            "Rainfall Bucket Tips",     NULL,  "{{ value_json.raw_count }}",        NULL,                     "diagnostic", NULL }
 };
 
 
@@ -180,6 +183,10 @@ static const char *get_topic_for_suffix(const char *suffix, app_ctx_t *ctx) {
     // AS3935 Lightning sensors all start with "as3935_lightning"
     if (strncmp(suffix, "as3935_lightning", 16) == 0) {
         return ctx->sensor_lightning_topic;
+    }
+    // Rainfall sensors all start with "rainfall"
+    if (strncmp(suffix, "rainfall", 8) == 0) {
+        return ctx->sensor_rainfall_topic;
     }
     // Everything else on the single "metrics" topic
     if (strcmp(suffix, "metrics")   == 0 ||
@@ -672,6 +679,27 @@ void mqtt_task(void *pvParameters)
                     );
                     ESP_LOGI(TAG, "Published AS3935 lightning sensor readings: %s (msg_id=%d)", payload, msg_id);
                 }
+
+                /* Rainfall */
+                wipe_payload(payload, sizeof(payload));
+                snprintf(payload, sizeof(payload),
+                    "{\"cumulative\":%.2f,"
+                    "\"rainfall_1h\":%.2f,"
+                    "\"raw_count\":%lu"
+                    "}",
+                    m->rainfall_cumulative_mm,
+                    m->rainfall_1h_mm,
+                    (unsigned long)m->rainfall_raw_count);
+
+                msg_id = esp_mqtt_client_publish(
+                    ctx->mqtt_client,
+                    ctx->sensor_rainfall_topic,
+                    payload,
+                    0,
+                    1,      /* QoS 1 */
+                    0       /* not retained */
+                );
+                ESP_LOGI(TAG, "Published rainfall sensor readings: %s (msg_id=%d)", payload, msg_id);
             } break;
             // add more message types here if you need them
 
