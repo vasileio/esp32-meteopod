@@ -13,7 +13,7 @@ static esp_err_t write_regs_i2c(i2c_master_dev_handle_t dev,
     uint8_t data[1 + len];
     data[0] = reg;
     memcpy(&data[1], buf, len);
-    esp_err_t err = i2c_master_transmit(dev, data, sizeof(data), pdMS_TO_TICKS(100));
+    esp_err_t err = i2c_master_transmit(dev, data, sizeof(data), pdMS_TO_TICKS(200));
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "I2C write reg 0x%02X failed: %s", reg, esp_err_to_name(err));
         return err;
@@ -29,12 +29,12 @@ static esp_err_t read_regs_i2c(i2c_master_dev_handle_t dev,
                                uint8_t *buf,
                                size_t len)
 {
-    esp_err_t err = i2c_master_transmit(dev, &reg, 1, pdMS_TO_TICKS(100));
+    esp_err_t err = i2c_master_transmit(dev, &reg, 1, pdMS_TO_TICKS(200));
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "I2C write-reg for read 0x%02X failed: %s", reg, esp_err_to_name(err));
         return err;
     }
-    err = i2c_master_receive(dev, buf, len, pdMS_TO_TICKS(100));
+    err = i2c_master_receive(dev, buf, len, pdMS_TO_TICKS(200));
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "I2C read reg 0x%02X failed: %s", reg, esp_err_to_name(err));
         return err;
@@ -121,6 +121,9 @@ esp_err_t DFRobot_rainfall_sensor_get_cumulative_hours(DFRobot_rainfall_sensor_t
     if (err != ESP_OK) {
         return err;
     }
+
+    // Small delay to allow sensor to process the hour parameter
+    vTaskDelay(pdMS_TO_TICKS(10));
 
     uint8_t buf[4];
     err = read_regs_i2c(sensor->dev, DFROBOT_RAINFALL_SENSOR_REG_TIME_RAINFALL, buf, 4);

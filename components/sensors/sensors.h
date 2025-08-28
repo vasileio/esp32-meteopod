@@ -18,6 +18,7 @@
 #include "wind_sensor.h"
 #include "mpu6050.h"
 #include "dfrobot_as3935.h"
+#include "dfrobot_rainfall_sensor.h"
 
 #define BME280_READY_TIMEOUT_MS   1000
 #define BME280_POLL_INTERVAL_MS     10
@@ -41,6 +42,9 @@ typedef struct
     float               light_lux;
     lightning_data_t    lightning_readings;
     bool                lightning_detected;  // Flag to indicate valid lightning data
+    float               rainfall_cumulative_mm;
+    float               rainfall_1h_mm;
+    uint32_t            rainfall_raw_count;
 } sensor_readings_t;
 
 /**
