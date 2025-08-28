@@ -7,6 +7,7 @@
 #include "app_context.h"
 #include "mqtt.h"
 #include "bh1750.h"
+#include "dfrobot_rainfall_sensor.h"
 #include "freertos/FreeRTOS.h"
 #include "esp_system.h"
 
@@ -77,6 +78,30 @@ static esp_err_t mpu6050_component_init(void *pvParameters)
         return ret;
     }
     ESP_LOGI(TAG, "MPU6050 sensor initialised successfully");
+    return ESP_OK;
+}
+
+/**
+ * @brief initialise DFRobot rainfall sensor
+ */
+static esp_err_t dfrobot_rainfall_sensor_component_init(void *pvParameters)
+{
+    app_ctx_t *ctx = (app_ctx_t *)pvParameters;
+
+    esp_err_t ret = DFRobot_rainfall_sensor_init(&ctx->rain_sensor, ctx->i2c_bus, 
+                                                DFROBOT_RAINFALL_SENSOR_I2C_ADDR_DEFAULT, 400000);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "DFRobot rainfall sensor initialization failed: %s", esp_err_to_name(ret));
+        return ret;
+    }
+
+    ret = DFRobot_rainfall_sensor_begin(&ctx->rain_sensor);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "DFRobot rainfall sensor begin failed: %s", esp_err_to_name(ret));
+        return ret;
+    }
+
+    ESP_LOGI(TAG, "DFRobot rainfall sensor initialised successfully");
     return ESP_OK;
 }
 
@@ -171,7 +196,14 @@ void sensors_init(void *pvParameters)
         dfrobot_as3935_set_indoor(&ctx->as3935_sensor);
         dfrobot_as3935_set_min_lightning(&ctx->as3935_sensor, 1);
     }
-        /* TODO: Add initialization for additional sensors here */
+
+    ret = dfrobot_rainfall_sensor_component_init(pvParameters);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "DFRobot rainfall sensor init failed: %s", esp_err_to_name(ret));
+    } else {
+        ESP_LOGI(TAG, "DFRobot rainfall sensor initialised");
+    }
+    /* TODO: Add initialization for additional sensors here */
 }
 
 void sensors_task(void *pvParameters)
@@ -345,12 +377,50 @@ void sensors_task(void *pvParameters)
             item.data.sensor.lightning_detected = false;
         }
 
+        /* Read DFRobot rainfall sensor */
+        float rainfall_cumulative, rainfall_1h;
+        uint32_t rainfall_raw_count;
+        
+        err = DFRobot_rainfall_sensor_get_cumulative(&ctx->rain_sensor, &rainfall_cumulative);
+        if (err != ESP_OK) {
+            ESP_LOGW(TAG, "DFRobot rainfall sensor cumulative read error (continuing): %s", esp_err_to_name(err));
+        } else {
+            vTaskDelay(pdMS_TO_TICKS(5));
+            
+            err = DFRobot_rainfall_sensor_get_cumulative_hours(&ctx->rain_sensor, 1, &rainfall_1h);
+            if (err != ESP_OK) {
+                ESP_LOGW(TAG, "DFRobot rainfall sensor 1h read error (continuing): %s", esp_err_to_name(err));
+                rainfall_1h = 0.0f;
+            }
+            
+            vTaskDelay(pdMS_TO_TICKS(5));
+            
+            err = DFRobot_rainfall_sensor_get_raw_count(&ctx->rain_sensor, &rainfall_raw_count);
+            if (err != ESP_OK) {
+                ESP_LOGW(TAG, "DFRobot rainfall sensor raw count read error (continuing): %s", esp_err_to_name(err));
+                rainfall_raw_count = 0;
+            }
+
+            if (xSemaphoreTake(ctx->sensorDataMutex, portMAX_DELAY) == pdTRUE) {
+                ctx->sensor_readings.rainfall_cumulative_mm = rainfall_cumulative;
+                ctx->sensor_readings.rainfall_1h_mm = rainfall_1h;
+                ctx->sensor_readings.rainfall_raw_count = rainfall_raw_count;
+                xSemaphoreGive(ctx->sensorDataMutex);
+
+                item.data.sensor.rainfall_cumulative_mm = rainfall_cumulative;
+                item.data.sensor.rainfall_1h_mm = rainfall_1h;
+                item.data.sensor.rainfall_raw_count = rainfall_raw_count;
+
+                ESP_LOGI(TAG, "[RAINFALL] Cumulative: %.2f mm, Last 1h: %.2f mm, Raw count: %lu", 
+                         rainfall_cumulative, rainfall_1h, (unsigned long)rainfall_raw_count);
+            }
+        }
+
     /* Enqueue for the MQTT task to format & publish */
     if (xQueueSend(ctx->mqttPublishQueue, &item, portMAX_DELAY) != pdTRUE) {
         ESP_LOGW(TAG, "MQTT metrics queue full, dropping heartbeat");
     }
     
-    /* TODO: Read additional sensors here */
     vTaskDelay(pdMS_TO_TICKS(SENSOR_READ_INTERVAL_MS));
         }
 }
