@@ -52,7 +52,7 @@ jobs:
         source /opt/esp-idf/export.sh
         /usr/local/bin/manage_usb_power cycle ttyUSB1
         esptool.py erase_flash
-        python3 test_runner.py --port /dev/ttyUSB1 --firmware unity-app/build/esp32_meteopod_test_app.bin --timeout 300 --output results.xml
+        python3 test_runner.py --port /dev/ttyUSB0 --firmware unity-app/build/esp32_meteopod_test_app.bin --timeout 300 --output results.xml
   
     - name: Upload test results
       uses: actions/upload-artifact@v4
@@ -81,7 +81,7 @@ jobs:
       run: |
         source /opt/esp-idf/export.sh
         /usr/local/bin/manage_usb_power cycle ttyUSB1
-        idf.py -p /dev/ttyUSB1 flash || idf.py -p /dev/ttyUSB1 flash
+        idf.py -p /dev/ttyUSB0 flash || idf.py -p /dev/ttyUSB0 flash
 
   monitor_output:
     needs: flash
@@ -95,7 +95,7 @@ jobs:
 
         echo "Starting monitor using 'script' to simulate TTY..."
 
-        timeout --preserve-status 30 script -q -c "idf.py -p /dev/ttyUSB1 monitor" monitor.log || [[ $? -eq 124 ]]
+        timeout --preserve-status 30 script -q -c "idf.py -p /dev/ttyUSB0 monitor" monitor.log || [[ $? -eq 124 ]]
         
         echo "Monitoring complete. Checking for expected output..."
 
