@@ -37,11 +37,11 @@ static const ha_sensor_config_t ha_sensors[] = {
     { "metrics",                "Uptime",                   "ms",  "{{ value_json.uptime_ms }}",        "duration",         "diagnostic", NULL },
     { "rssi",                   "Wi-Fi RSSI",               "dBm", "{{ value_json.rssi }}",             "signal_strength",  "diagnostic", NULL },
     { "ip_address",             "IP Address",               NULL,    "{{ value_json.ip_address }}",     NULL,               "diagnostic", NULL },
-    { "bme280_temperature",     "Case Temperature",         "°C",  "{{ value_json.temperature }}",      "temperature",      "diagnostic", NULL },
-    { "bme280_humidity",        "Case Humidity",            "%",   "{{ value_json.humidity }}",         "humidity",         "diagnostic", NULL },
-    { "bme280_pressure",        "Atmospheric Pressure",     "hPa", "{{ value_json.pressure }}",         "pressure",         NULL,         NULL },
-    { "sht31_temperature",      "Temperature",              "°C",  "{{ value_json.temperature }}",      "temperature",      NULL,         NULL },
-    { "sht31_humidity",         "Humidity",                 "%",   "{{ value_json.humidity }}",         "humidity",         NULL,         NULL },
+    { "case_temperature",       "Case Temperature",         "°C",  "{{ value_json.temperature }}",      "temperature",      "diagnostic", NULL },
+    { "case_humidity",          "Case Humidity",            "%",   "{{ value_json.humidity }}",         "humidity",         "diagnostic", NULL },
+    { "case_pressure",          "Case Pressure",            "hPa", "{{ value_json.pressure }}",         "pressure",         "diagnostic", NULL },
+    { "ambient_temperature",    "Ambient Temperature",      "°C",  "{{ value_json.temperature }}",      "temperature",      NULL,         NULL },
+    { "ambient_humidity",       "Ambient Humidity",         "%",   "{{ value_json.humidity }}",         "humidity",         NULL,         NULL },
     { "wind_direction",         "Wind Direction",           NULL,  "{{ value_json.direction }}",        NULL,               NULL,         NULL },
     { "wind_speed",             "Wind Speed",               "m/s", "{{ value_json.speed }}",            "wind_speed",       NULL,         NULL },
     { "light",                  "Illuminance",              "lx",   "{{ value_json.illuminance }}",     "illuminance",      NULL,         NULL },
@@ -189,13 +189,13 @@ static bool should_publish_sensor(const char *suffix, app_ctx_t *ctx) {
         return true;
     }
     
-    // Check BME280 sensors
-    if (strncmp(suffix, "bme280", 6) == 0) {
+    // Check BME280 sensors (now with "case" prefix)
+    if (strncmp(suffix, "case", 4) == 0) {
         return ctx->sensor_readings.sensor_status.bme280_ok;
     }
     
-    // Check SHT31 sensors
-    if (strncmp(suffix, "sht31", 5) == 0) {
+    // Check SHT31 sensors (now with "ambient" prefix)
+    if (strncmp(suffix, "ambient", 7) == 0) {
         return ctx->sensor_readings.sensor_status.sht31_ok;
     }
     
@@ -233,12 +233,12 @@ static bool should_publish_sensor(const char *suffix, app_ctx_t *ctx) {
  * Returns NULL if we don't know that suffix, so the caller can skip it.
  */
 static const char *get_topic_for_suffix(const char *suffix, app_ctx_t *ctx) {
-    // BME280 sensors all start with "bme280"
-    if (strncmp(suffix, "bme280", 6) == 0) {
+    // BME280 sensors now start with "case"
+    if (strncmp(suffix, "case", 4) == 0) {
         return ctx->sensor_bme280_topic;
     }
-    // SHT31 sensors all start with "sht31"
-    if (strncmp(suffix, "sht31", 5) == 0) {
+    // SHT31 sensors now start with "ambient"
+    if (strncmp(suffix, "ambient", 7) == 0) {
         return ctx->sensor_sht31_topic;
     }
     // Wind sensors all start with "wind"
