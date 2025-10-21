@@ -233,6 +233,10 @@ esp_err_t adc_oneshot_del_unit(adc_oneshot_unit_handle_t handle) {
     return ESP_OK;
 }
 
+/* Undefine FreeRTOS macros so we can provide stub implementations */
+#undef xSemaphoreCreateMutex
+#undef vSemaphoreDelete
+
 /**
  * @brief Stub implementation of xSemaphoreCreateMutex
  *
@@ -252,12 +256,7 @@ void vSemaphoreDelete(SemaphoreHandle_t xSemaphore) {
     /* No-op */
 }
 
-/**
- * @brief Stub implementation of vTaskDelay
- *
- * @param xTicksToDelay Number of ticks to delay (ignored)
- */
-void vTaskDelay(TickType_t xTicksToDelay) {
-    (void)xTicksToDelay;
-    /* No-op for tests */
-}
+/* Note: vTaskDelay is provided by FreeRTOS and cannot be stubbed 
+ * since it would conflict with the real implementation. For tests,
+ * the real vTaskDelay function will be used but should be minimal
+ * in the test environment. */
