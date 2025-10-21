@@ -37,8 +37,6 @@ static const ha_sensor_config_t ha_sensors[] = {
     { "metrics",                "Uptime",                   "ms",  "{{ value_json.uptime_ms }}",        "duration",         "diagnostic", NULL },
     { "rssi",                   "Wi-Fi RSSI",               "dBm", "{{ value_json.rssi }}",             "signal_strength",  "diagnostic", NULL },
     { "ip_address",             "IP Address",               NULL,    "{{ value_json.ip_address }}",     NULL,               "diagnostic", NULL },
-    { "case_temperature",       "Case Temperature",         "°C",  "{{ value_json.temperature }}",      "temperature",      "diagnostic", NULL },
-    { "case_humidity",          "Case Humidity",            "%",   "{{ value_json.humidity }}",         "humidity",         "diagnostic", NULL },
     { "bme280_pressure",        "Atmospheric Pressure",     "hPa", "{{ value_json.pressure }}",         "pressure",         NULL,         NULL },
     { "ambient_temperature",    "Temperature",              "°C",  "{{ value_json.temperature }}",      "temperature",      NULL,         NULL },
     { "ambient_humidity",       "Humidity",                 "%",   "{{ value_json.humidity }}",         "humidity",         NULL,         NULL },
@@ -189,8 +187,8 @@ static bool should_publish_sensor(const char *suffix, app_ctx_t *ctx) {
         return true;
     }
     
-    // Check BME280 sensors (case prefix and bme280_pressure)
-    if (strncmp(suffix, "case", 4) == 0 || strncmp(suffix, "bme280", 6) == 0) {
+    // Check BME280 sensors (only bme280_pressure)
+    if (strncmp(suffix, "bme280", 6) == 0) {
         return ctx->sensor_readings.sensor_status.bme280_ok;
     }
     
@@ -233,8 +231,8 @@ static bool should_publish_sensor(const char *suffix, app_ctx_t *ctx) {
  * Returns NULL if we don't know that suffix, so the caller can skip it.
  */
 static const char *get_topic_for_suffix(const char *suffix, app_ctx_t *ctx) {
-    // BME280 sensors: "case" prefix and "bme280_pressure"
-    if (strncmp(suffix, "case", 4) == 0 || strncmp(suffix, "bme280", 6) == 0) {
+    // BME280 sensors: only "bme280_pressure"
+    if (strncmp(suffix, "bme280", 6) == 0) {
         return ctx->sensor_bme280_topic;
     }
     // SHT31 sensors now start with "ambient"
