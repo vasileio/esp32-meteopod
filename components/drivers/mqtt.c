@@ -175,8 +175,62 @@ static void clear_HA_discovery_configs(esp_mqtt_client_handle_t client, const ch
 }
 
 /**
+ * @brief Check if a sensor should be published based on its initialization status.
+ * 
+ * @param suffix Sensor suffix from ha_sensors array
+ * @param ctx Application context containing sensor status
+ * @return true if sensor should be published, false otherwise
+ */
+static bool should_publish_sensor(const char *suffix, app_ctx_t *ctx) {
+    // Always publish metrics (uptime, RSSI, IP address)
+    if (strcmp(suffix, "metrics") == 0 ||
+        strcmp(suffix, "rssi") == 0 ||
+        strcmp(suffix, "ip_address") == 0) {
+        return true;
+    }
+    
+    // Check BME280 sensors
+    if (strncmp(suffix, "bme280", 6) == 0) {
+        return ctx->sensor_readings.sensor_status.bme280_ok;
+    }
+    
+    // Check SHT31 sensors
+    if (strncmp(suffix, "sht31", 5) == 0) {
+        return ctx->sensor_readings.sensor_status.sht31_ok;
+    }
+    
+    // Check wind sensors
+    if (strncmp(suffix, "wind", 4) == 0) {
+        return ctx->sensor_readings.sensor_status.wind_ok;
+    }
+    
+    // Check light sensor
+    if (strcmp(suffix, "light") == 0) {
+        return ctx->sensor_readings.sensor_status.light_ok;
+    }
+    
+    // Check MPU6050 sensors
+    if (strncmp(suffix, "mpu6050", 7) == 0) {
+        return ctx->sensor_readings.sensor_status.mpu6050_ok;
+    }
+    
+    // Check AS3935 lightning sensors
+    if (strncmp(suffix, "as3935_lightning", 16) == 0) {
+        return ctx->sensor_readings.sensor_status.lightning_ok;
+    }
+    
+    // Check rainfall sensors
+    if (strncmp(suffix, "rainfall", 8) == 0) {
+        return ctx->sensor_readings.sensor_status.rainfall_ok;
+    }
+    
+    // Default: don't publish unknown sensors
+    return false;
+}
+
+/**
  * Map a sensor‐suffix to the correct MQTT topic string in ctx.
- * Returns NULL if we don’t know that suffix, so the caller can skip it.
+ * Returns NULL if we don't know that suffix, so the caller can skip it.
  */
 static const char *get_topic_for_suffix(const char *suffix, app_ctx_t *ctx) {
     // BME280 sensors all start with "bme280"
@@ -244,6 +298,12 @@ static void publish_all_discovery_configs(esp_mqtt_client_handle_t client, app_c
 
     /* 3) single, clean loop */
     for (size_t i = 0; i < ARRAY_SIZE(sensors); ++i) {
+        // Check if sensor should be published based on initialization status
+        if (!should_publish_sensor(sensors[i].suffix, ctx)) {
+            ESP_LOGI(TAG, "Skipping uninitialized sensor: %s", sensors[i].suffix);
+            continue;
+        }
+        
         const char *topic = get_topic_for_suffix(sensors[i].suffix, ctx);
         if (!topic) {
             ESP_LOGW(TAG, "Skipping unknown sensor suffix: %s",
