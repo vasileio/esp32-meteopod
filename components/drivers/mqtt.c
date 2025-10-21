@@ -1,5 +1,6 @@
 #include "mqtt.h"
 #include <cJSON.h>
+#include <stdlib.h>
 
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
@@ -130,7 +131,21 @@ static void publish_HA_discovery_config(esp_mqtt_client_handle_t client,
     cJSON_AddStringToObject(device, "manufacturer", "vasileio");
     cJSON_AddItemToObject(root, "device", device);
 
-    snprintf(payload, sizeof(payload), "%s", cJSON_PrintUnformatted(root));
+    char *json_string = cJSON_PrintUnformatted(root);
+    if (json_string != NULL) {
+        size_t json_len = strlen(json_string);
+        if (json_len < sizeof(payload)) {
+            snprintf(payload, sizeof(payload), "%s", json_string);
+        } else {
+            ESP_LOGE(TAG, "JSON string too large for payload buffer (%zu >= %zu)", 
+                     json_len, sizeof(payload));
+            payload[0] = '\0';  // Empty payload on error
+        }
+        free(json_string);  // Free the allocated string
+    } else {
+        ESP_LOGE(TAG, "Failed to generate JSON string for discovery config");
+        payload[0] = '\0';  // Empty payload on error
+    }
     cJSON_Delete(root);
 
     esp_mqtt_client_publish(client, topic, payload, 0, 1, true);  // retain = true

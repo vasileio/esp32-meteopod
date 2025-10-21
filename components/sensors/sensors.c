@@ -10,11 +10,12 @@
 #include "dfrobot_rainfall_sensor.h"
 #include "freertos/FreeRTOS.h"
 #include "esp_system.h"
+#include <string.h>
 
 static const char *TAG = "SENSORS";
 
-// Lightning emulation for testing purposes
-#define LIGHTNING_EMULATION_ENABLED 1
+// Lightning emulation for testing purposes - should be disabled in production
+#define LIGHTNING_EMULATION_ENABLED 0
 #define LIGHTNING_EMULATION_INTERVAL_CYCLES 12  // ~60 seconds (12 * 5s)
 static uint32_t lightning_emulation_counter = 0;
 
@@ -146,64 +147,107 @@ static esp_err_t read_bme280_measurement(bme280_handle_t *handle, bme280_data_t 
 void sensors_init(void *pvParameters)
 {
     esp_err_t ret;
+    int successful_sensors = 0;
+    int total_sensors = 7;
 
     app_ctx_t *ctx = (app_ctx_t *)pvParameters;  
+
+    /* Initialize all sensor status flags to false */
+    memset(&ctx->sensor_readings.sensor_status, 0, sizeof(sensor_status_t));
 
     /* initialise BME280 temperature/humidity/pressure sensor */
     ret = bme280_component_init(pvParameters);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "BME280 init failed: %s", esp_err_to_name(ret));
+        ctx->sensor_readings.sensor_status.bme280_ok = false;
     } else {
         ESP_LOGI(TAG, "BME280 initialised");
+        ctx->sensor_readings.sensor_status.bme280_ok = true;
+        successful_sensors++;
     }
 
     ret = sht31_component_init(pvParameters);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "SHT31 init failed: %s", esp_err_to_name(ret));
+        ctx->sensor_readings.sensor_status.sht31_ok = false;
     } else {
         ESP_LOGI(TAG, "SHT31 initialised");
+        ctx->sensor_readings.sensor_status.sht31_ok = true;
+        successful_sensors++;
     }
 
     ret = wind_sensor_init();
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Wind sensor init failed: %s", esp_err_to_name(ret));
+        ctx->sensor_readings.sensor_status.wind_ok = false;
     } else {
         ESP_LOGI(TAG, "Wind sensor initialised");
+        ctx->sensor_readings.sensor_status.wind_ok = true;
+        successful_sensors++;
     }
 
     ret = bh1750_init(&ctx->bh1750_sensor, I2C_PORT, BH1750_I2C_ADDR);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Light sensor init failed: %s", esp_err_to_name(ret));
+        ctx->sensor_readings.sensor_status.light_ok = false;
     } else {
         ESP_LOGI(TAG, "Light sensor initialised");
-        bh1750_set_mode(&ctx->bh1750_sensor, CONTINUOUS_HIGH_RES_MODE);
+        ctx->sensor_readings.sensor_status.light_ok = true;
+        successful_sensors++;
+        esp_err_t mode_ret = bh1750_set_mode(&ctx->bh1750_sensor, CONTINUOUS_HIGH_RES_MODE);
+        if (mode_ret != ESP_OK) {
+            ESP_LOGW(TAG, "Light sensor mode setting failed: %s", esp_err_to_name(mode_ret));
+        }
     }
 
     /* initialise MPU6050 sensor */
     ret = mpu6050_component_init(pvParameters);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "MPU6050 init failed: %s", esp_err_to_name(ret));
+        ctx->sensor_readings.sensor_status.mpu6050_ok = false;
     } else {
         ESP_LOGI(TAG, "MPU6050 initialised");
+        ctx->sensor_readings.sensor_status.mpu6050_ok = true;
+        successful_sensors++;
     }
-
 
     ret = dfrobot_as3935_init_with_irq(&ctx->as3935_sensor, I2C_PORT, AS3935_I2C_ADDR, GPIO_NUM_4);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Lightning sensor init failed: %s", esp_err_to_name(ret));
+        ctx->sensor_readings.sensor_status.lightning_ok = false;
     } else {
         ESP_LOGI(TAG, "Lightning sensor initialised with IRQ on GPIO4");
-        dfrobot_as3935_set_indoor(&ctx->as3935_sensor);
-        dfrobot_as3935_set_min_lightning(&ctx->as3935_sensor, 1);
+        ctx->sensor_readings.sensor_status.lightning_ok = true;
+        successful_sensors++;
+        esp_err_t config_ret = dfrobot_as3935_set_indoor(&ctx->as3935_sensor);
+        if (config_ret != ESP_OK) {
+            ESP_LOGW(TAG, "Lightning sensor indoor config failed: %s", esp_err_to_name(config_ret));
+        }
+        config_ret = dfrobot_as3935_set_min_lightning(&ctx->as3935_sensor, 1);
+        if (config_ret != ESP_OK) {
+            ESP_LOGW(TAG, "Lightning sensor min lightning config failed: %s", esp_err_to_name(config_ret));
+        }
     }
 
     ret = dfrobot_rainfall_sensor_component_init(pvParameters);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "DFRobot rainfall sensor init failed: %s", esp_err_to_name(ret));
+        ctx->sensor_readings.sensor_status.rainfall_ok = false;
     } else {
         ESP_LOGI(TAG, "DFRobot rainfall sensor initialised");
+        ctx->sensor_readings.sensor_status.rainfall_ok = true;
+        successful_sensors++;
     }
-    /* TODO: Add initialization for additional sensors here */
+
+    /* Log sensor initialization summary */
+    ESP_LOGI(TAG, "Sensor initialization complete: %d/%d sensors successful", 
+             successful_sensors, total_sensors);
+    
+    if (successful_sensors == 0) {
+        ESP_LOGE(TAG, "CRITICAL: No sensors initialized successfully! System may not function properly.");
+    } else if (successful_sensors < total_sensors) {
+        ESP_LOGW(TAG, "WARNING: Some sensors failed to initialize. Functionality will be limited.");
+    }
 }
 
 void sensors_task(void *pvParameters)
@@ -225,12 +269,12 @@ void sensors_task(void *pvParameters)
 
     while (1) {
         /* BME280 */
-
-        // Try to read — on error, just warn and continue
-        err = read_bme280_measurement(&bme_handle, &bme280_data);
-        if (err != ESP_OK) {
-            ESP_LOGW(TAG, "BME280 read error (continuing): %s", esp_err_to_name(err));
-        } else {
+        if (ctx->sensor_readings.sensor_status.bme280_ok) {
+            // Try to read — on error, just warn and continue
+            err = read_bme280_measurement(&bme_handle, &bme280_data);
+            if (err != ESP_OK) {
+                ESP_LOGW(TAG, "BME280 read error (continuing): %s", esp_err_to_name(err));
+            } else {
             /* Acquire mutex before updating shared context */
             if (xSemaphoreTake(ctx->sensorDataMutex, portMAX_DELAY) == pdTRUE)
             {
@@ -249,13 +293,15 @@ void sensors_task(void *pvParameters)
             } else {
                 ESP_LOGW(TAG, "Failed to take sensorDataMutex");
             }
-
+            }
         }
 
-        err = sht31_read_temp_hum(&ctx->sh31_sensor, &sht31_data.temperature, &sht31_data.humidity);
-        if (err != ESP_OK) {
-            ESP_LOGW(TAG, "SHT31 read error (continuing): %s", esp_err_to_name(err));
-        } else {
+        /* SHT31 */
+        if (ctx->sensor_readings.sensor_status.sht31_ok) {
+            err = sht31_read_temp_hum(&ctx->sh31_sensor, &sht31_data.temperature, &sht31_data.humidity);
+            if (err != ESP_OK) {
+                ESP_LOGW(TAG, "SHT31 read error (continuing): %s", esp_err_to_name(err));
+            } else {
 
             /* Acquire mutex before updating shared context */
             if (xSemaphoreTake(ctx->sensorDataMutex, portMAX_DELAY) == pdTRUE) 
@@ -270,12 +316,15 @@ void sensors_task(void *pvParameters)
                 ESP_LOGI(TAG, "[SHT31] Temperature: %.2f °C", sht31_data.temperature);
                 ESP_LOGI(TAG, "[SHT31] Humidity:    %.2f %%RH", sht31_data.humidity);
             }
+            }
         }
 
-        err = wind_sensor_read(&wind_data);
-        if (err != ESP_OK) {
-            ESP_LOGW(TAG, "SHT31 read error (continuing): %s", esp_err_to_name(err));
-        } else {
+        /* Wind sensor */
+        if (ctx->sensor_readings.sensor_status.wind_ok) {
+            err = wind_sensor_read(&wind_data);
+            if (err != ESP_OK) {
+                ESP_LOGW(TAG, "Wind sensor read error (continuing): %s", esp_err_to_name(err));
+            } else {
 
             /* Acquire mutex before updating shared context */
             if (xSemaphoreTake(ctx->sensorDataMutex, portMAX_DELAY) == pdTRUE)
@@ -290,9 +339,12 @@ void sensors_task(void *pvParameters)
                 ESP_LOGI(TAG, "[WIND] Direction: %s", wind_data.direction);
                 ESP_LOGI(TAG, "[WIND] Speed: %.1f m/s", wind_data.speed);
             }
+            }
         }
 
-        err = bh1750_read_light(&ctx->bh1750_sensor, &light_lux);
+        /* Light sensor */
+        if (ctx->sensor_readings.sensor_status.light_ok) {
+            err = bh1750_read_light(&ctx->bh1750_sensor, &light_lux);
         if (err != ESP_OK) {
             ESP_LOGW(TAG, "BH1750 read error (continuing): %s", esp_err_to_name(err));
         } else {
@@ -308,10 +360,12 @@ void sensors_task(void *pvParameters)
 
                 ESP_LOGI(TAG, "[LIGHT] Ambient light: %.0f", light_lux);
             }
+            }
         }
 
         /* Read MPU6050 */
-        err = mpu6050_read_all(&ctx->mpu6050_sensor, &mpu_data);
+        if (ctx->sensor_readings.sensor_status.mpu6050_ok) {
+            err = mpu6050_read_all(&ctx->mpu6050_sensor, &mpu_data);
         if (err != ESP_OK) {
             ESP_LOGW(TAG, "MPU6050 read error (continuing): %s", esp_err_to_name(err));
         } else {
@@ -325,18 +379,22 @@ void sensors_task(void *pvParameters)
                 ESP_LOGI(TAG, "[MPU6050] Gyro: %.2f, %.2f, %.2f dps", mpu_data.gyro_x, mpu_data.gyro_y, mpu_data.gyro_z);
                 ESP_LOGI(TAG, "[MPU6050] Temp: %.2f °C", mpu_data.temperature);
             }
+            }
         }
 
         bool lightning_detected = false;
         
-        // Check for real lightning events
-        err = dfrobot_as3935_process_irq(&ctx->as3935_sensor, &lightning_data, 100);
-        if (err == ESP_OK) {
-            lightning_detected = true;
-            ESP_LOGI(TAG, "[LIGHTNING] Real strike detected: %d km away, energy: %lu", 
-                     lightning_data.distance_km, lightning_data.strike_energy);
-        } else if (err != ESP_ERR_TIMEOUT) {
-            ESP_LOGW(TAG, "Lightning sensor IRQ processing error: %s", esp_err_to_name(err));
+        /* Lightning sensor */
+        if (ctx->sensor_readings.sensor_status.lightning_ok) {
+            // Check for real lightning events
+            err = dfrobot_as3935_process_irq(&ctx->as3935_sensor, &lightning_data, 100);
+            if (err == ESP_OK) {
+                lightning_detected = true;
+                ESP_LOGI(TAG, "[LIGHTNING] Real strike detected: %d km away, energy: %lu", 
+                         lightning_data.distance_km, lightning_data.strike_energy);
+            } else if (err != ESP_ERR_TIMEOUT) {
+                ESP_LOGW(TAG, "Lightning sensor IRQ processing error: %s", esp_err_to_name(err));
+            }
         }
         
 #if LIGHTNING_EMULATION_ENABLED
@@ -378,10 +436,11 @@ void sensors_task(void *pvParameters)
         }
 
         /* Read DFRobot rainfall sensor */
-        float rainfall_cumulative, rainfall_1h;
-        uint32_t rainfall_raw_count;
-        
-        err = DFRobot_rainfall_sensor_get_cumulative(&ctx->rain_sensor, &rainfall_cumulative);
+        if (ctx->sensor_readings.sensor_status.rainfall_ok) {
+            float rainfall_cumulative, rainfall_1h;
+            uint32_t rainfall_raw_count;
+            
+            err = DFRobot_rainfall_sensor_get_cumulative(&ctx->rain_sensor, &rainfall_cumulative);
         if (err != ESP_OK) {
             ESP_LOGW(TAG, "DFRobot rainfall sensor cumulative read error (continuing): %s", esp_err_to_name(err));
         } else {
@@ -413,6 +472,7 @@ void sensors_task(void *pvParameters)
 
                 ESP_LOGI(TAG, "[RAINFALL] Cumulative: %.2f mm, Last 1h: %.2f mm, Raw count: %lu", 
                          rainfall_cumulative, rainfall_1h, (unsigned long)rainfall_raw_count);
+            }
             }
         }
 

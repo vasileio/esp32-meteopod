@@ -29,6 +29,21 @@
 #define SENSOR_READ_INTERVAL_MS 5000
 
 /**
+ * @brief Sensor initialization status structure
+ *
+ * Tracks which sensors were successfully initialized.
+ */
+typedef struct {
+    bool bme280_ok;
+    bool sht31_ok;
+    bool wind_ok;
+    bool light_ok;
+    bool mpu6050_ok;
+    bool lightning_ok;
+    bool rainfall_ok;
+} sensor_status_t;
+
+/**
  * @brief Sensors readings structure
  *
  * Contains all readings acquired by the various sensors.
@@ -45,6 +60,7 @@ typedef struct
     float               rainfall_cumulative_mm;
     float               rainfall_1h_mm;
     uint32_t            rainfall_raw_count;
+    sensor_status_t     sensor_status;  // Track sensor initialization status
 } sensor_readings_t;
 
 /**
