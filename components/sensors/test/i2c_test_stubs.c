@@ -185,7 +185,7 @@ void tearDown(void) {
  * @param ret_unit Pointer to store ADC unit handle
  * @return Value of stub_adc_init_ret
  */
-esp_err_t adc_oneshot_new_unit(const adc_oneshot_unit_init_config_t *init_config, adc_oneshot_unit_handle_t *ret_unit) {
+esp_err_t adc_oneshot_new_unit(const adc_oneshot_unit_init_cfg_t *init_config, adc_oneshot_unit_handle_t *ret_unit) {
     (void)init_config;
     *ret_unit = (adc_oneshot_unit_handle_t)0xADC1;
     return stub_adc_init_ret;

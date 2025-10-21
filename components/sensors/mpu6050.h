@@ -118,4 +118,18 @@ esp_err_t mpu6050_read_temp(mpu6050_handle_t *h, float *temp);
  */
 esp_err_t mpu6050_read_all(mpu6050_handle_t *h, mpu6050_data_t *data);
 
+/**
+ * @brief Alias for mpu6050_read_all for test compatibility.
+ */
+static inline esp_err_t mpu6050_read_data(mpu6050_handle_t *h, mpu6050_data_t *data) {
+    return mpu6050_read_all(h, data);
+}
+
+/**
+ * @brief Alias for mpu6050_read_temp for test compatibility.
+ */
+static inline esp_err_t mpu6050_read_temperature(mpu6050_handle_t *h, float *temp) {
+    return mpu6050_read_temp(h, temp);
+}
+
 #endif /* MPU6050_H */

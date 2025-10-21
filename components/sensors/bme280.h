@@ -196,6 +196,26 @@ esp_err_t bme280_get_chip_id(bme280_handle_t *handle, uint8_t *chip_id);
  */
 float bme280_calculate_sea_level_pressure(float pressure, float altitude);
 
+/**
+ * @brief Perform forced mode measurement and return temperature, pressure, and humidity.
+ */
+esp_err_t bme280_read_forced(bme280_handle_t *handle, float *temperature, float *pressure, float *humidity);
+
+/**
+ * @brief Read temperature only in forced mode.
+ */
+esp_err_t bme280_read_temperature(bme280_handle_t *handle, float *temperature);
+
+/**
+ * @brief Read pressure only in forced mode.
+ */
+esp_err_t bme280_read_pressure(bme280_handle_t *handle, float *pressure);
+
+/**
+ * @brief Read humidity only in forced mode.
+ */
+esp_err_t bme280_read_humidity(bme280_handle_t *handle, float *humidity);
+
 #ifdef __cplusplus
 }
 #endif

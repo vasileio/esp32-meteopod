@@ -317,3 +317,73 @@ float bme280_calculate_sea_level_pressure(float pressure, float altitude)
     // Calculate sea-level pressure from current pressure and altitude
     return pressure / powf(1.0f - (altitude / 44330.0f), 5.255f);
 }
+
+esp_err_t bme280_read_forced(bme280_handle_t *handle, float *temperature, float *pressure, float *humidity)
+{
+    ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "null handle");
+    ESP_RETURN_ON_FALSE(handle->initialised, ESP_ERR_INVALID_STATE, TAG, "not initialised");
+
+    bme280_data_t data;
+    esp_err_t err;
+
+    // Trigger forced measurement
+    err = bme280_trigger_measurement(handle);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    // Wait for measurement to complete
+    bool ready = false;
+    int timeout = 100;  // 100ms timeout
+    while (!ready && timeout > 0) {
+        err = bme280_is_meas_ready(handle, &ready);
+        if (err != ESP_OK) {
+            return err;
+        }
+        if (!ready) {
+            vTaskDelay(pdMS_TO_TICKS(1));
+            timeout--;
+        }
+    }
+
+    if (!ready) {
+        return ESP_ERR_TIMEOUT;
+    }
+
+    // Read the data
+    err = bme280_read_data(handle, &data);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    // Copy results to output parameters
+    if (temperature) {
+        *temperature = data.temperature;
+    }
+    if (pressure) {
+        *pressure = data.pressure;
+    }
+    if (humidity) {
+        *humidity = data.humidity;
+    }
+
+    return ESP_OK;
+}
+
+esp_err_t bme280_read_temperature(bme280_handle_t *handle, float *temperature)
+{
+    ESP_RETURN_ON_FALSE(temperature, ESP_ERR_INVALID_ARG, TAG, "null temperature");
+    return bme280_read_forced(handle, temperature, NULL, NULL);
+}
+
+esp_err_t bme280_read_pressure(bme280_handle_t *handle, float *pressure)
+{
+    ESP_RETURN_ON_FALSE(pressure, ESP_ERR_INVALID_ARG, TAG, "null pressure");
+    return bme280_read_forced(handle, NULL, pressure, NULL);
+}
+
+esp_err_t bme280_read_humidity(bme280_handle_t *handle, float *humidity)
+{
+    ESP_RETURN_ON_FALSE(humidity, ESP_ERR_INVALID_ARG, TAG, "null humidity");
+    return bme280_read_forced(handle, NULL, NULL, humidity);
+}
