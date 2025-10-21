@@ -65,11 +65,10 @@ TEST_CASE("BME280 init succeeds with valid params", "[bme280]") {
     /* Mock chip ID response - this is the first read that happens */
     fake_buf[0] = BME280_CHIP_ID;  /* Correct chip ID (0x60) */
     
-    /* Mock calibration data - BME280 reads 26 bytes then 7 bytes */
-    /* Set some realistic calibration values to avoid division by zero */
-    fake_buf[0] = 0x70; fake_buf[1] = 0x6B;  /* dig_T1 = 27504 */
-    fake_buf[2] = 0x43; fake_buf[3] = 0x67;  /* dig_T2 = 26435 */
-    fake_buf[4] = 0x18; fake_buf[5] = 0x00;  /* dig_T3 = 24 */
+    /* Note: For test simplicity, we mock the chip ID read correctly.
+     * The calibration data reads will also use fake_buf, but since the
+     * BME280 driver parses calibration correctly and we're not testing
+     * the calibration math here, we can leave the rest as zeros. */
     
     esp_err_t err = bme280_init(&handle, I2C_NUM_0, BME280_I2C_ADDR, &config);
     TEST_ASSERT_EQUAL(ESP_OK, err);

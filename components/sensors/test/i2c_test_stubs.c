@@ -15,6 +15,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
+#include "freertos/semphr.h"
 #include "esp_adc/adc_oneshot.h"
 
 /**
@@ -230,4 +231,33 @@ esp_err_t adc_oneshot_read(adc_oneshot_unit_handle_t handle, adc_channel_t chann
 esp_err_t adc_oneshot_del_unit(adc_oneshot_unit_handle_t handle) {
     (void)handle;
     return ESP_OK;
+}
+
+/**
+ * @brief Stub implementation of xSemaphoreCreateMutex
+ *
+ * @return Mock semaphore handle
+ */
+SemaphoreHandle_t xSemaphoreCreateMutex(void) {
+    return (SemaphoreHandle_t)0xBEEF;  /* Mock mutex handle */
+}
+
+/**
+ * @brief Stub implementation of vSemaphoreDelete
+ *
+ * @param xSemaphore Semaphore handle (ignored)
+ */
+void vSemaphoreDelete(SemaphoreHandle_t xSemaphore) {
+    (void)xSemaphore;
+    /* No-op */
+}
+
+/**
+ * @brief Stub implementation of vTaskDelay
+ *
+ * @param xTicksToDelay Number of ticks to delay (ignored)
+ */
+void vTaskDelay(TickType_t xTicksToDelay) {
+    (void)xTicksToDelay;
+    /* No-op for tests */
 }
