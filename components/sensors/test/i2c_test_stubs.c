@@ -20,9 +20,9 @@
 /**
  * @brief Shared stub variables (visible to all test CUs)
  */
-esp_err_t stub_transmit_ret;  /**< Return value for I2C transmit operations */
-esp_err_t stub_receive_ret;   /**< Return value for I2C receive operations */
-uint8_t    fake_buf[8];       /**< Buffer for simulated I2C data (big enough for all tests) */
+esp_err_t stub_transmit_ret = ESP_OK;  /**< Return value for I2C transmit operations */
+esp_err_t stub_receive_ret = ESP_OK;   /**< Return value for I2C receive operations */
+uint8_t    fake_buf[8] = {0};          /**< Buffer for simulated I2C data (big enough for all tests) */
 
 /* ADC stub variables */
 esp_err_t stub_adc_init_ret = ESP_OK;  /**< Return value for ADC init operations */

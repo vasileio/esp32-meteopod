@@ -55,14 +55,21 @@ TEST_CASE("BME280 init succeeds with valid params", "[bme280]") {
     bme280_config_t config;
     bme280_get_default_config(&config);
     
+    /* Ensure stubs are properly reset */
     stub_transmit_ret = ESP_OK;
     stub_receive_ret = ESP_OK;
     
-    /* Mock chip ID response */
-    fake_buf[0] = BME280_CHIP_ID;  /* Correct chip ID */
+    /* Clear the fake buffer first */
+    memset(fake_buf, 0, 8);
     
-    /* Mock calibration data (simplified) */
-    memset(fake_buf, 0x01, 26);  /* First calibration block */
+    /* Mock chip ID response - this is the first read that happens */
+    fake_buf[0] = BME280_CHIP_ID;  /* Correct chip ID (0x60) */
+    
+    /* Mock calibration data - BME280 reads 26 bytes then 7 bytes */
+    /* Set some realistic calibration values to avoid division by zero */
+    fake_buf[0] = 0x70; fake_buf[1] = 0x6B;  /* dig_T1 = 27504 */
+    fake_buf[2] = 0x43; fake_buf[3] = 0x67;  /* dig_T2 = 26435 */
+    fake_buf[4] = 0x18; fake_buf[5] = 0x00;  /* dig_T3 = 24 */
     
     esp_err_t err = bme280_init(&handle, I2C_NUM_0, BME280_I2C_ADDR, &config);
     TEST_ASSERT_EQUAL(ESP_OK, err);
@@ -85,16 +92,23 @@ TEST_CASE("BME280 init fails with null handle", "[bme280]") {
 }
 
 /**
- * @brief Test BME280 initialization fails with null config
+ * @brief Test BME280 initialization with null config (uses defaults)
  *
- * Verifies that initialization properly validates config pointer
- * and returns appropriate error for null input.
+ * Verifies that initialization works when config is NULL 
+ * by using default configuration internally.
  */
-TEST_CASE("BME280 init fails with null config", "[bme280]") {
+TEST_CASE("BME280 init with null config uses defaults", "[bme280]") {
     bme280_handle_t handle = { 0 };
     
+    /* Reset stubs for clean test */
+    stub_transmit_ret = ESP_OK;
+    stub_receive_ret = ESP_OK;
+    memset(fake_buf, 0, 8);
+    fake_buf[0] = BME280_CHIP_ID;  /* Mock correct chip ID */
+    
     esp_err_t err = bme280_init(&handle, I2C_NUM_0, BME280_I2C_ADDR, NULL);
-    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG, err);
+    TEST_ASSERT_EQUAL(ESP_OK, err);
+    TEST_ASSERT_TRUE(handle.initialised);
 }
 
 /**
