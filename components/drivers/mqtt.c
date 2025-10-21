@@ -103,6 +103,10 @@ static void publish_HA_discovery_config(esp_mqtt_client_handle_t client,
     snprintf(topic, sizeof(topic),
              "homeassistant/sensor/meteopod_%s/%s/config", mac_str, suffix);
 
+    // Build object_id with MAC address for Home Assistant entity naming
+    char object_id[96];
+    snprintf(object_id, sizeof(object_id), "meteopod_%s_%s", mac_str, suffix);
+
     cJSON *root = cJSON_CreateObject();
 
     cJSON_AddStringToObject(root, "name", name);
@@ -110,8 +114,8 @@ static void publish_HA_discovery_config(esp_mqtt_client_handle_t client,
     cJSON_AddStringToObject(root, "unit_of_measurement", unit);
     cJSON_AddStringToObject(root, "value_template", value_template);
     cJSON_AddStringToObject(root, "unique_id", unique_id);
-    /* force the Entity Registry object_id to be exactly our suffix */
-    cJSON_AddStringToObject(root, "object_id", suffix);
+    /* Entity Registry object_id includes MAC for unique identification */
+    cJSON_AddStringToObject(root, "object_id", object_id);
     if (device_class) {
         cJSON_AddStringToObject(root, "device_class", device_class);
     }
