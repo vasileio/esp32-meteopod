@@ -158,12 +158,15 @@ static void publish_HA_discovery_config(esp_mqtt_client_handle_t client,
 /**
  * @brief Clear all retained MQTT discovery topics for Home Assistant.
  *
- * Publishes empty retained messages to each known discovery config topic.
+ * Clears the entire homeassistant/sensor/meteopod_<MAC> topic tree by publishing
+ * empty retained messages to each known discovery config topic, then clearing
+ * any potential orphaned topics.
  */
 static void clear_HA_discovery_configs(esp_mqtt_client_handle_t client, const char *mac)
 {
     char topic[192];
 
+    // Clear individual known sensor config topics
     for (size_t i = 0; i < ARRAY_SIZE(ha_sensors); ++i) {
         snprintf(topic, sizeof(topic),
                  "homeassistant/sensor/meteopod_%s/%s/config",
@@ -172,6 +175,11 @@ static void clear_HA_discovery_configs(esp_mqtt_client_handle_t client, const ch
         esp_mqtt_client_publish(client, topic, "", 0, 1, true);
         ESP_LOGI(TAG, "Cleared discovery topic: %s", topic);
     }
+
+    // Clear the entire device topic tree by publishing empty to base topic
+    snprintf(topic, sizeof(topic), "homeassistant/sensor/meteopod_%s", mac);
+    esp_mqtt_client_publish(client, topic, "", 0, 1, true);
+    ESP_LOGI(TAG, "Cleared entire discovery topic tree: %s", topic);
 }
 
 /**
