@@ -39,7 +39,7 @@ static const ha_sensor_config_t ha_sensors[] = {
     { "ip_address",             "IP Address",               NULL,    "{{ value_json.ip_address }}",     NULL,               "diagnostic", NULL },
     { "case_temperature",       "Case Temperature",         "°C",  "{{ value_json.temperature }}",      "temperature",      "diagnostic", NULL },
     { "case_humidity",          "Case Humidity",            "%",   "{{ value_json.humidity }}",         "humidity",         "diagnostic", NULL },
-    { "bme280_pressure",        "Atmospheric Pressure",     "hPa", "{{ value_json.pressure }}",         "pressure",         "diagnostic", NULL },
+    { "bme280_pressure",        "Atmospheric Pressure",     "hPa", "{{ value_json.pressure }}",         "pressure",         NULL,         NULL },
     { "ambient_temperature",    "Temperature",              "°C",  "{{ value_json.temperature }}",      "temperature",      NULL,         NULL },
     { "ambient_humidity",       "Humidity",                 "%",   "{{ value_json.humidity }}",         "humidity",         NULL,         NULL },
     { "wind_direction",         "Wind Direction",           NULL,  "{{ value_json.direction }}",        NULL,               NULL,         NULL },
