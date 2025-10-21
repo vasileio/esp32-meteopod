@@ -211,7 +211,7 @@ esp_err_t wind_sensor_read(wind_data_t *wind_readings)
 
     wind_readings->direction = wind_direction_from_mV(voltage_mV);
 
-    /* TODO: Replace with real wind speed reading */
+    /* Read wind speed */
     err = wind_sensor_adc_read(adc1_handle,
                                WIND_SENSOR_SPEED_ADC_CHANNEL,
                                CONFIG_WIND_SPEED_SENSOR_VOLTAGE_OFFSET_MV,
